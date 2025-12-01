@@ -1,12 +1,22 @@
 import axios from 'axios';
+import { storage } from '../utils/auth';
 
-const API_URL = 'http://localhost:5000/api'; // ← Ubah dari 3000 ke 5000
+const API_URL = 'http://localhost:5000/api';
 
 const api = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json'
   }
+});
+
+// Interceptor untuk menambahkan user-id di header
+api.interceptors.request.use((config) => {
+  const userId = storage.getUserId();
+  if (userId) {
+    config.headers['user-id'] = userId;
+  }
+  return config;
 });
 
 // Auth APIs
@@ -34,6 +44,16 @@ export const userAPI = {
   getById: (id) => api.get(`/users/${id}`),
   update: (id, data) => api.put(`/users/${id}`, data),
   delete: (id) => api.delete(`/users/${id}`)
+};
+
+// Spatial Data APIs (Admin only)
+export const spatialDataAPI = {
+  getAll: () => api.get('/spatial-data'),
+  getByMarkerId: (markerId) => api.get(`/spatial-data/marker/${markerId}`),
+  create: (data) => api.post('/spatial-data', data),
+  update: (id, data) => api.put(`/spatial-data/${id}`, data),
+  delete: (id) => api.delete(`/spatial-data/${id}`),
+  getStatistics: () => api.get('/spatial-data/statistics')
 };
 
 export default api;

@@ -6,7 +6,7 @@ const connectDB = require('./config/database');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 
 // Connect to MongoDB
 connectDB();
@@ -16,46 +16,31 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 
-// CORS (untuk frontend yang berbeda domain)
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
-  
-  next();
-});
-
 // Routes
+app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/markers', require('./routes/markerRoutes'));
+app.use('/api/users', require('./routes/userRoutes'));
+app.use('/api/spatial-data', require('./routes/spatialDataRoutes')); // ← Tambahkan ini
+
+// Health check
 app.get('/', (req, res) => {
-  res.json({ 
-    message: 'Leaflet Map API',
-    version: '1.0.0',
-    endpoints: {
-      markers: '/api/markers',
-      users: '/api/users',
-      auth: '/api/auth'
-    }
+  res.json({
+    message: 'API Server Running',
+    status: 'OK',
+    timestamp: new Date().toISOString()
   });
 });
 
-app.use('/api/markers', require('./routes/markerRoutes'));
-app.use('/api/users', require('./routes/userRoutes'));
-app.use('/api/auth', require('./routes/authRoutes'));
+// Error Handler
+app.use(errorHandler);
 
-// 404 handler
+// 404 Handler
 app.use((req, res) => {
   res.status(404).json({
     success: false,
     message: `Route ${req.originalUrl} not found`
   });
 });
-
-// Error handler (harus di akhir)
-app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);

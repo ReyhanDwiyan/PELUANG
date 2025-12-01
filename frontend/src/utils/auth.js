@@ -1,6 +1,6 @@
 export const storage = {
-  setUser: (user) => {
-    localStorage.setItem('user', JSON.stringify(user));
+  setUser: (userData) => {
+    localStorage.setItem('user', JSON.stringify(userData));
   },
   
   getUser: () => {
@@ -8,18 +8,46 @@ export const storage = {
     return user ? JSON.parse(user) : null;
   },
   
+  getUserId: () => {
+    const user = storage.getUser();
+    return user ? user._id : null;
+  },
+
+  getUserRole: () => {
+    const user = storage.getUser();
+    return user ? user.role : null;
+  },
+
+  isAdmin: () => {
+    const role = storage.getUserRole();
+    return role === 'admin';
+  },
+  
   removeUser: () => {
     localStorage.removeItem('user');
   },
   
   isAuthenticated: () => {
-    return localStorage.getItem('user') !== null;
+    return storage.getUser() !== null;
   }
 };
 
 export const requireAuth = (navigate) => {
   if (!storage.isAuthenticated()) {
     navigate('/login');
+    return false;
+  }
+  return true;
+};
+
+export const requireAdmin = (navigate) => {
+  if (!storage.isAuthenticated()) {
+    navigate('/login');
+    return false;
+  }
+  if (!storage.isAdmin()) {
+    alert('Access Denied: Admin only');
+    navigate('/dashboard');
     return false;
   }
   return true;
