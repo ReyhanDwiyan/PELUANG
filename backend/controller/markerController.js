@@ -1,8 +1,8 @@
 const Marker = require('../models/Marker');
 
-// @desc    Get all markers
-// @route   GET /api/markers
-// @access  Public
+// @desc    Get all markers
+// @route   GET /api/markers
+// @access  Private
 exports.getAllMarkers = async (req, res) => {
   try {
     const { category, search, limit = 100 } = req.query;
@@ -41,9 +41,9 @@ exports.getAllMarkers = async (req, res) => {
   }
 };
 
-// @desc    Get single marker by ID
-// @route   GET /api/markers/:id
-// @access  Public
+// @desc    Get single marker by ID
+// @route   GET /api/markers/:id
+// @access  Private
 exports.getMarkerById = async (req, res) => {
   try {
     const marker = await Marker.findById(req.params.id)
@@ -69,12 +69,18 @@ exports.getMarkerById = async (req, res) => {
   }
 };
 
-// @desc    Create new marker
-// @route   POST /api/markers
-// @access  Public (nanti bisa dijadikan Private dengan auth)
+// @desc    Create new marker
+// @route   POST /api/markers
+// @access  Private/Admin
 exports.createMarker = async (req, res) => {
   try {
-    const marker = await Marker.create(req.body);
+    // Menambahkan createdBy dari req.user yang disediakan oleh middleware 'protect'
+    const newMarkerData = {
+      ...req.body,
+      createdBy: req.user.id // <-- Mengambil ID user dari token
+    };
+
+    const marker = await Marker.create(newMarkerData);
     
     res.status(201).json({
       success: true,
@@ -90,28 +96,33 @@ exports.createMarker = async (req, res) => {
   }
 };
 
-// @desc    Update marker
-// @route   PUT /api/markers/:id
-// @access  Public (nanti bisa dijadikan Private dengan auth)
+// @desc    Update marker
+// @route   PUT /api/markers/:id
+// @access  Private/Admin
 exports.updateMarker = async (req, res) => {
   try {
-    const marker = await Marker.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    );
-    
+    const marker = await Marker.findById(req.params.id);
+
     if (!marker) {
       return res.status(404).json({
         success: false,
         message: 'Marker not found'
       });
     }
+
+    // Hanya admin yang bisa mengupdate, ini sesuai dengan routes Anda (protect, isAdmin)
+    // Logika otorisasi kepemilikan (jika bukan admin) bisa ditambahkan di sini, tapi kita ikuti routes: Admin Only.
+    
+    const updatedMarker = await Marker.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
+    );
     
     res.status(200).json({
       success: true,
       message: 'Marker updated successfully',
-      data: marker
+      data: updatedMarker
     });
   } catch (error) {
     res.status(400).json({
@@ -122,9 +133,9 @@ exports.updateMarker = async (req, res) => {
   }
 };
 
-// @desc    Delete marker
-// @route   DELETE /api/markers/:id
-// @access  Public (nanti bisa dijadikan Private dengan auth)
+// @desc    Delete marker
+// @route   DELETE /api/markers/:id
+// @access  Private/Admin
 exports.deleteMarker = async (req, res) => {
   try {
     const marker = await Marker.findByIdAndDelete(req.params.id);
@@ -149,9 +160,9 @@ exports.deleteMarker = async (req, res) => {
   }
 };
 
-// @desc    Get markers by location (nearby)
-// @route   GET /api/markers/nearby
-// @access  Public
+// @desc    Get markers by location (nearby)
+// @route   GET /api/markers/nearby
+// @access  Private
 exports.getNearbyMarkers = async (req, res) => {
   try {
     const { latitude, longitude, radius = 5 } = req.query;
@@ -192,9 +203,9 @@ exports.getNearbyMarkers = async (req, res) => {
   }
 };
 
-// @desc    Get markers statistics
-// @route   GET /api/markers/stats
-// @access  Public
+// @desc    Get markers statistics
+// @route   GET /api/markers/stats
+// @access  Private
 exports.getMarkerStats = async (req, res) => {
   try {
     const stats = await Marker.aggregate([

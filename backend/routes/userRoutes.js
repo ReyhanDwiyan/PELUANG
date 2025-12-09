@@ -1,13 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('../controller/userController');
+const { protect, isAdmin } = require('../middleware/authMiddleware'); // <-- Impor middleware
 
 router.route('/')
-  .get(userController.getAllUsers);        // GET /api/users
+  .get(protect, isAdmin, userController.getAllUsers); // GET /api/users <-- PROTECT & ISADMIN
 
 router.route('/:id')
-  .get(userController.getUserById)         // GET /api/users/:id
-  .put(userController.updateUser)          // PUT /api/users/:id
-  .delete(userController.deleteUser);      // DELETE /api/users/:id
+  .get(protect, isAdmin, userController.getUserById)    // GET /api/users/:id <-- PROTECT & ISADMIN
+  .put(protect, isAdmin, userController.updateUser)     // PUT /api/users/:id <-- PROTECT & ISADMIN
+  .delete(protect, isAdmin, userController.deleteUser);  // DELETE /api/users/:id <-- PROTECT & ISADMIN
 
 module.exports = router;

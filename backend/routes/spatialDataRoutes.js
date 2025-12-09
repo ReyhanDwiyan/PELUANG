@@ -1,16 +1,17 @@
 const express = require('express');
 const router = express.Router();
 const spatialDataController = require('../controller/spatialDataController');
-const { isAdmin } = require('../middleware/authMiddleware');
+const { protect, isAdmin } = require('../middleware/authMiddleware'); // <-- Impor protect
 
-// Public routes
-router.get('/', spatialDataController.getAllSpatialData);
-router.get('/marker/:markerId', spatialDataController.getSpatialDataByMarker);
-router.get('/statistics', spatialDataController.getStatistics);
+// Public routes (Sekarang Terproteksi)
+router.get('/', protect, spatialDataController.getAllSpatialData);           // <-- PROTECT
+router.get('/marker/:markerId', protect, spatialDataController.getSpatialDataByMarker); // <-- PROTECT
+router.get('/statistics', protect, spatialDataController.getStatistics);   // <-- PROTECT
 
 // Admin only routes
-router.post('/', isAdmin, spatialDataController.createSpatialData);
-router.put('/:id', isAdmin, spatialDataController.updateSpatialData);
-router.delete('/:id', isAdmin, spatialDataController.deleteSpatialData);
+// Catatan: Middleware 'protect' harus selalu mendahului 'isAdmin'
+router.post('/', protect, isAdmin, spatialDataController.createSpatialData);        // <-- PROTECT & ISADMIN
+router.put('/:id', protect, isAdmin, spatialDataController.updateSpatialData);      // <-- PROTECT & ISADMIN
+router.delete('/:id', protect, isAdmin, spatialDataController.deleteSpatialData);    // <-- PROTECT & ISADMIN
 
 module.exports = router;

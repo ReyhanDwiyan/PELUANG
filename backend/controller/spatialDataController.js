@@ -1,7 +1,9 @@
 const SpatialData = require('../models/SpatialData');
 const Marker = require('../models/Marker');
 
-// CREATE - Tambah data spasial (Admin only)
+// @desc    CREATE - Tambah data spasial
+// @route   POST /api/spatial-data
+// @access  Private/Admin
 exports.createSpatialData = async (req, res) => {
   try {
     const { 
@@ -36,7 +38,7 @@ exports.createSpatialData = async (req, res) => {
       averageIncome,
       populationDensity,
       roadAccessibility,
-      createdBy: req.user._id
+      createdBy: req.user.id // <-- Mengambil ID user dari token
     });
 
     await spatialData.save();
@@ -55,7 +57,9 @@ exports.createSpatialData = async (req, res) => {
   }
 };
 
-// READ ALL - Get all spatial data
+// @desc    READ ALL - Get all spatial data
+// @route   GET /api/spatial-data
+// @access  Private
 exports.getAllSpatialData = async (req, res) => {
   try {
     const spatialData = await SpatialData.find()
@@ -77,7 +81,9 @@ exports.getAllSpatialData = async (req, res) => {
   }
 };
 
-// READ ONE - Get spatial data by marker ID
+// @desc    READ ONE - Get spatial data by marker ID
+// @route   GET /api/spatial-data/marker/:markerId
+// @access  Private
 exports.getSpatialDataByMarker = async (req, res) => {
   try {
     const spatialData = await SpatialData.findOne({ markerId: req.params.markerId })
@@ -104,7 +110,9 @@ exports.getSpatialDataByMarker = async (req, res) => {
   }
 };
 
-// UPDATE - Update spatial data (Admin only)
+// @desc    UPDATE - Update spatial data
+// @route   PUT /api/spatial-data/:id
+// @access  Private/Admin
 exports.updateSpatialData = async (req, res) => {
   try {
     const { 
@@ -147,7 +155,9 @@ exports.updateSpatialData = async (req, res) => {
   }
 };
 
-// DELETE - Delete spatial data (Admin only)
+// @desc    DELETE - Delete spatial data
+// @route   DELETE /api/spatial-data/:id
+// @access  Private/Admin
 exports.deleteSpatialData = async (req, res) => {
   try {
     const spatialData = await SpatialData.findByIdAndDelete(req.params.id);
@@ -172,7 +182,9 @@ exports.deleteSpatialData = async (req, res) => {
   }
 };
 
-// GET STATISTICS - Get analysis statistics
+// @desc    GET STATISTICS - Get analysis statistics
+// @route   GET /api/spatial-data/statistics
+// @access  Private
 exports.getStatistics = async (req, res) => {
   try {
     const stats = await SpatialData.aggregate([

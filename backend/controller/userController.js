@@ -1,8 +1,8 @@
 const User = require('../models/User');
 
-// @desc    Get all users
-// @route   GET /api/users
-// @access  Private/Admin
+// @desc    Get all users
+// @route   GET /api/users
+// @access  Private/Admin
 exports.getAllUsers = async (req, res) => {
   try {
     const users = await User.find({ isActive: true })
@@ -23,9 +23,9 @@ exports.getAllUsers = async (req, res) => {
   }
 };
 
-// @desc    Get single user by ID
-// @route   GET /api/users/:id
-// @access  Private
+// @desc    Get single user by ID
+// @route   GET /api/users/:id
+// @access  Private/Admin
 exports.getUserById = async (req, res) => {
   try {
     const user = await User.findById(req.params.id).select('-password');
@@ -50,12 +50,12 @@ exports.getUserById = async (req, res) => {
   }
 };
 
-// @desc    Update user
-// @route   PUT /api/users/:id
-// @access  Private
+// @desc    Update user
+// @route   PUT /api/users/:id
+// @access  Private/Admin
 exports.updateUser = async (req, res) => {
   try {
-    // Don't allow password update through this route
+    // Jangan izinkan update password melalui rute ini
     if (req.body.password) {
       delete req.body.password;
     }
@@ -87,14 +87,14 @@ exports.updateUser = async (req, res) => {
   }
 };
 
-// @desc    Delete user
-// @route   DELETE /api/users/:id
-// @access  Private/Admin
+// @desc    Delete user
+// @route   DELETE /api/users/:id
+// @access  Private/Admin
 exports.deleteUser = async (req, res) => {
   try {
     const user = await User.findByIdAndUpdate(
       req.params.id,
-      { isActive: false },
+      { isActive: false }, // Menggunakan soft delete
       { new: true }
     );
     
