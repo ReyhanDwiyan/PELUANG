@@ -36,14 +36,17 @@ const Register = () => {
       const { confirmPassword, ...registerData } = formData;
       const response = await authAPI.register(registerData);
       
-      if (response.data.success) {
+      // Server kita mengirim { success: true, ... }
+      if (response.data.success) { 
         alert('Registrasi berhasil! Silakan login.');
         navigate('/login');
       } else {
-        setError(response.data.message);
+        setError(response.data.message || 'Registrasi gagal.');
       }
+      
     } catch (error) {
-      setError(error.response?.data?.message || 'Registrasi gagal');
+      // Axios error.response.data adalah body respons 400 dari backend
+      setError(error.response?.data?.message || 'Registrasi gagal. Coba lagi nanti.');
     } finally {
       setLoading(false);
     }

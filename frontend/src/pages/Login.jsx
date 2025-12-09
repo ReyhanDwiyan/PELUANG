@@ -34,14 +34,18 @@ const Login = () => {
     try {
       const response = await authAPI.login(formData);
       
-      if (response.data.success) {
-        storage.setUser(response.data.data);
+      // Server kita mengirim { success: true, data: { ... } }
+      if (response.data.success) { 
+        // Simpan data user (ID, username, role, dsb.) ke Local Storage
+        storage.setUser(response.data.data); 
         navigate('/dashboard');
       } else {
-        setError(response.data.message);
+        setError(response.data.message || 'Login gagal.');
       }
+      
     } catch (error) {
-      setError(error.response?.data?.message || 'Login gagal. Periksa koneksi Anda.');
+      // Axios error.response.data adalah body respons 401/400 dari backend
+      setError(error.response?.data?.message || 'Login gagal. Periksa kredensial/koneksi Anda.');
     } finally {
       setLoading(false);
     }

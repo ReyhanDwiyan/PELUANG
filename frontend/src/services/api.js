@@ -7,10 +7,17 @@ const api = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json'
-  }
+  },
+  // *** PERBAIKAN PENTING ***
+  // Mengizinkan browser untuk mengirimkan HTTP-only cookie (token JWT)
+  withCredentials: true 
+  // **************************
 });
 
-// Interceptor untuk menambahkan user-id di header
+// Interceptor Dihapus: 
+// Middleware 'protect' di backend sekarang mencari token di cookie,
+// bukan di header 'user-id'. Interceptor ini sudah tidak diperlukan.
+/*
 api.interceptors.request.use((config) => {
   const userId = storage.getUserId();
   if (userId) {
@@ -18,11 +25,15 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
+*/
 
 // Auth APIs
 export const authAPI = {
+  // Semua permintaan ini sekarang secara otomatis mengirimkan cookie
   login: (credentials) => api.post('/auth/login', credentials),
-  register: (userData) => api.post('/auth/register', userData)
+  register: (userData) => api.post('/auth/register', userData),
+  // Tambahkan logout (jika ada)
+  logout: () => api.get('/auth/logout') 
 };
 
 // Marker APIs
