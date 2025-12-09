@@ -1,4 +1,3 @@
-SpatialData.js
 const mongoose = require('mongoose');
 
 const spatialDataSchema = new mongoose.Schema({
