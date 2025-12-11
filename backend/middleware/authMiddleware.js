@@ -1,62 +1,84 @@
-const jwt = require('jsonwebtoken'); 
+const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-// Middleware untuk melindungi rute (Memeriksa JWT dari Cookie)
+// Middleware untuk melindungi rute (Support Cookie DAN Authorization Header)
 const protect = async (req, res, next) => {
   let token;
 
-  // Cek token dari Cookie yang dikirim oleh browser
-  if (req.cookies.token) {
+  // 1. Cek dari Authorization Header (Bearer Token)
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+    token = req.headers.authorization.split(' ')[1];
+  }
+  // 2. Cek dari Cookie
+  else if (req.cookies.token) {
     token = req.cookies.token;
   }
-  
-  // Jika tidak ada token (belum login), tolak akses
+  // 3. Fallback: Cek user-id di header (untuk backward compatibility)
+  else if (req.headers['user-id']) {
+    try {
+      const userId = req.headers['user-id'];
+      const user = await User.findById(userId).select('-password');
+      
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          message: 'User tidak ditemukan'
+        });
+      }
+
+      req.user = user;
+      return next();
+    } catch (error) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid user ID'
+      });
+    }
+  }
+
+  // Jika tidak ada token sama sekali
   if (!token) {
     return res.status(401).json({
       success: false,
-      message: 'Not authorized to access this route - No token'
+      message: 'Not authorized - No token provided'
     });
   }
 
   try {
-    // 1. Verifikasi Token
+    // Verifikasi Token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
-    // 2. Cari Pengguna berdasarkan ID di Token (tanpa password)
-    const user = await User.findById(decoded.id);
+    // Cari user berdasarkan ID di token
+    const user = await User.findById(decoded.id).select('-password');
 
     if (!user) {
-        return res.status(404).json({
-            success: false,
-            message: 'User not found'
-        });
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
     }
 
-    // 3. Masukkan Objek Pengguna ke Request
+    // Attach user ke request
     req.user = user;
     
     next();
   } catch (error) {
-    console.error(error);
+    console.error('Token verification error:', error);
     return res.status(401).json({
       success: false,
-      message: 'Not authorized to access this route - Token failed or expired'
+      message: 'Not authorized - Invalid or expired token'
     });
   }
 };
 
-
-// Middleware untuk cek apakah user adalah admin
-// Middleware ini harus dijalankan SETELAH 'protect'
+// Middleware untuk cek admin (harus setelah protect)
 const isAdmin = (req, res, next) => {
-  // Memeriksa objek req.user yang sudah diisi oleh middleware 'protect'
   if (!req.user || req.user.role !== 'admin') {
     return res.status(403).json({
       success: false,
-      message: 'Forbidden - Hanya admin yang dapat mengakses'
+      message: 'Forbidden - Admin access only'
     });
   }
-
   next();
 };
 

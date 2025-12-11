@@ -2,37 +2,40 @@ require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const morgan = require('morgan');
+const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const connectDB = require('./config/database');
 const errorHandler = require('./middleware/errorHandler');
-const cookieParser = require('cookie-parser');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-const cors = require('cors');
-app.use(cors({
-  origin: 'http://localhost:3000',
-  credentials: true
-}));
-
 // Connect to MongoDB
 connectDB();
 
+// CORS Configuration - PERBAIKI INI
+app.use(cors({
+  origin: 'http://localhost:3000', // Frontend URL
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'user-id']
+}));
+
 // Middleware
+app.use(cookieParser());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(morgan('dev'));
-app.use(cookieParser());
 
 // Routes
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/markers', require('./routes/markerRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
-app.use('/api/spatial-data', require('./routes/spatialDataRoutes')); // ← Tambahkan ini
+app.use('/api/spatial-data', require('./routes/spatialDataRoutes'));
 
 // Health check
 app.get('/', (req, res) => {
-  res.json({
+  res.json({ 
     message: 'API Server Running',
     status: 'OK',
     timestamp: new Date().toISOString()
