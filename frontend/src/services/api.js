@@ -8,32 +8,52 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json'
   },
-  // *** PERBAIKAN PENTING ***
-  // Mengizinkan browser untuk mengirimkan HTTP-only cookie (token JWT)
-  withCredentials: true 
-  // **************************
+  withCredentials: true // PENTING: Untuk mengirim cookies
 });
 
-// Interceptor Dihapus: 
-// Middleware 'protect' di backend sekarang mencari token di cookie,
-// bukan di header 'user-id'. Interceptor ini sudah tidak diperlukan.
-/*
-api.interceptors.request.use((config) => {
-  const userId = storage.getUserId();
-  if (userId) {
-    config.headers['user-id'] = userId;
+// Interceptor untuk menambahkan token/user-id di header
+api.interceptors.request.use(
+  (config) => {
+    // 1. Coba ambil token dari localStorage
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    // 2. Fallback: kirim user-id (backward compatibility)
+    const userId = storage.getUserId();
+    if (userId) {
+      config.headers['user-id'] = userId;
+    }
+
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
   }
-  return config;
-});
-*/
+);
+
+// Interceptor untuk handle 401 (expired token)
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      // Token expired atau invalid
+      console.log('Token expired, logging out...');
+      storage.removeUser();
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
 
 // Auth APIs
 export const authAPI = {
-  // Semua permintaan ini sekarang secara otomatis mengirimkan cookie
   login: (credentials) => api.post('/auth/login', credentials),
   register: (userData) => api.post('/auth/register', userData),
-  // Tambahkan logout (jika ada)
-  logout: () => api.get('/auth/logout') 
+  logout: () => api.get('/auth/logout'),
+  getCurrentUser: () => api.get('/auth/me')
 };
 
 // Marker APIs

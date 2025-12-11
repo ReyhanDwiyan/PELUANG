@@ -28,24 +28,49 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
     setLoading(true);
+    setError('');
 
     try {
-      const response = await authAPI.login(formData);
-      
-      // Server kita mengirim { success: true, data: { ... } }
-      if (response.data.success) { 
-        // Simpan data user (ID, username, role, dsb.) ke Local Storage
-        storage.setUser(response.data.data); 
+      console.log('Attempting login with:', formData.email);
+
+      const response = await authAPI.login({
+        email: formData.email,
+        password: formData.password
+      });
+
+      console.log('Login response:', response.data);
+
+      if (response.data.success) {
+        const { data: userData, token } = response.data;
+
+        // 1. Simpan user data ke localStorage
+        storage.setUser(userData);
+
+        // 2. Simpan token ke localStorage
+        if (token) {
+          localStorage.setItem('token', token);
+          console.log('Token saved:', token.substring(0, 20) + '...');
+        }
+
+        console.log('Login successful, user data:', userData);
+
+        alert('Login berhasil!');
         navigate('/dashboard');
-      } else {
-        setError(response.data.message || 'Login gagal.');
       }
-      
     } catch (error) {
-      // Axios error.response.data adalah body respons 401/400 dari backend
-      setError(error.response?.data?.message || 'Login gagal. Periksa kredensial/koneksi Anda.');
+      console.error('Login error:', error);
+
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+        setError(error.response.data.message || 'Login gagal');
+      } else if (error.request) {
+        console.error('No response from server');
+        setError('Tidak dapat terhubung ke server. Pastikan backend berjalan.');
+      } else {
+        console.error('Error:', error.message);
+        setError('Terjadi kesalahan: ' + error.message);
+      }
     } finally {
       setLoading(false);
     }
