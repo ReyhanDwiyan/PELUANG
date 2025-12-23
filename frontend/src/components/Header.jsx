@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { storage } from "../utils/auth";
 import "../styles/Header.css";
@@ -6,10 +6,36 @@ import "../styles/Header.css";
 export default function Header() {
     const location = useLocation();
     const isAuthenticated = storage.isAuthenticated();
-    
-    // Navbar tetap tampil di semua halaman termasuk landing
+    const [isVisible, setIsVisible] = useState(true);
+    const [lastScrollY, setLastScrollY] = useState(0);
+
+    useEffect(() => {
+        const handleScroll = () => {
+            const currentScrollY = window.scrollY;
+
+            if (currentScrollY < 10) {
+                // Selalu tampilkan di top
+                setIsVisible(true);
+            } else if (currentScrollY > lastScrollY && currentScrollY > 80) {
+                // Scroll ke bawah & sudah lewat 80px → hide
+                setIsVisible(false);
+            } else if (currentScrollY < lastScrollY) {
+                // Scroll ke atas → show
+                setIsVisible(true);
+            }
+
+            setLastScrollY(currentScrollY);
+        };
+
+        window.addEventListener('scroll', handleScroll, { passive: true });
+
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+        };
+    }, [lastScrollY]);
+
     return (
-        <header className="topnav">
+        <header className={`topnav ${isVisible ? 'topnav--visible' : 'topnav--hidden'}`}>
             <div className="topnav__inner">
                 <NavLink to={isAuthenticated ? "/dashboard" : "/"} className="topnav__brand">
                     <span className="topnav__mark" />
@@ -38,7 +64,7 @@ export default function Header() {
 
                 <div className="topnav__right">
                     {isAuthenticated ? (
-                        <button 
+                        <button
                             className="topnav__btn topnav__logout"
                             onClick={() => {
                                 storage.removeUser();

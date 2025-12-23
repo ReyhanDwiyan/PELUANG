@@ -1,9 +1,22 @@
 .topnav {
-    position: sticky;
+    position: fixed;
     top: 0;
-    z-index: 50;
+    left: 0;
+    right: 0;
+    z-index: 9999;
     background: #3f434b;
     border-bottom: 1px solid rgba(255, 255, 255, .08);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+}
+
+.topnav--visible {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.topnav--hidden {
+    transform: translateY(-100%);
+    opacity: 0;
 }
 
 .topnav__inner {
@@ -50,6 +63,7 @@
     font-size: 14px;
     padding: 10px 8px;
     border-radius: 10px;
+    transition: all .2s ease;
 }
 
 .topnav__links a:hover {
@@ -76,6 +90,7 @@
     font-size: 14px;
     padding: 10px 14px;
     border-radius: 10px;
+    transition: all .2s ease;
 }
 
 .topnav__login:hover {
