@@ -2,9 +2,8 @@
 
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Sidebar from '../components/Sidebar';
 import { requireAuth } from '../utils/auth';
-import '../styles/Dashboard.css';
+import '../styles/GlobalPages.css';
 
 const AnalysisPage = () => {
     const navigate = useNavigate();
@@ -14,19 +13,25 @@ const AnalysisPage = () => {
     }, [navigate]);
 
     return (
-        <div className="dashboard-container">
-            <Sidebar />
-            <main className="main-content">
-                <header className="content-header">
-                    <h1>Analisis Potensi</h1>
+        <div className="page-wrapper">
+            <div className="page-container">
+                <header className="page-header">
+                    <h1 className="page-title">Analisis Potensi</h1>
+                    <p className="page-subtitle">Analisis data spasial dan potensi usaha</p>
                 </header>
-                <div className="content-section">
-                    <div className="content-card">
-                        <h2>Analisis Potensi Usaha</h2>
-                        <p>Fitur analisis akan segera hadir...</p>
+
+                <div className="card">
+                    <div className="card-header">
+                        <h2 className="card-title">Analisis Potensi Usaha</h2>
+                    </div>
+                    <div className="card-body">
+                        <p>Fitur analisis akan tersedia segera.</p>
+                        <button className="btn btn-primary" style={{ marginTop: '16px' }}>
+                            Mulai Analisis Baru
+                        </button>
                     </div>
                 </div>
-            </main>
+            </div>
         </div>
     );
 };

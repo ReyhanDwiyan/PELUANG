@@ -2,9 +2,9 @@
 
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Sidebar from '../components/Sidebar';
 import { requireAdmin } from '../utils/auth';
 import { markerAPI, spatialDataAPI } from '../services/api';
+import '../styles/GlobalPages.css';
 import '../styles/AdminPage.css';
 
 const AdminPage = () => {
@@ -157,22 +157,17 @@ const AdminPage = () => {
     if (loading) {
         return (
             <div className="dashboard-container">
-                <Sidebar />
-                <main className="main-content">
-                    <div className="loading">Loading...</div>
-                </main>
+                <div className="loading">Loading...</div>
             </div>
         );
     }
 
     return (
-        <div className="dashboard-container">
-            <Sidebar />
-
-            <main className="main-content">
-                <header className="content-header">
-                    <h1>🔐 Admin Panel</h1>
-                    <p className="subtitle">Kelola Data Spasial & Analisis Potensi Usaha</p>
+        <div className="page-wrapper">
+            <div className="page-container">
+                <header className="page-header">
+                    <h1 className="page-title">Admin Panel</h1>
+                    <p className="page-subtitle">Kelola data marker dan spatial</p>
                 </header>
 
                 <div className="admin-actions">
@@ -390,7 +385,7 @@ const AdminPage = () => {
                         </ul>
                     </div>
                 </div>
-            </main>
+            </div>
         </div>
     );
 };

@@ -1,0 +1,132 @@
+.landing-wrapper {
+    min-height: 100vh;
+    background:
+        radial-gradient(1200px 600px at 20% 0%, rgba(109, 94, 252, .35), transparent 55%),
+        radial-gradient(900px 500px at 90% 10%, rgba(54, 214, 255, .26), transparent 60%),
+        linear-gradient(180deg, #1a202c, #0f1419);
+}
+
+.landing-hero {
+    min-height: 100vh;
+    display: grid;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: clip;
+}
+
+.landing-hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgba(0, 0, 0, .38), rgba(0, 0, 0, .15));
+    pointer-events: none;
+}
+
+.hero-container {
+    position: relative;
+    z-index: 1;
+    width: min(1120px, calc(100% - 40px));
+    margin-inline: auto;
+    padding: 56px 0;
+}
+
+.hero-card {
+    width: min(720px, 100%);
+    border-radius: 18px;
+    padding: clamp(22px, 3vw, 32px);
+    background: rgba(9, 14, 26, .58);
+    border: 1px solid rgba(255, 255, 255, .12);
+    box-shadow: 0 18px 60px rgba(0, 0, 0, .35);
+    backdrop-filter: blur(10px);
+    color: #eaf0ff;
+}
+
+.hero-kicker {
+    margin: 0 0 12px;
+    font-weight: 800;
+    font-size: 13px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: rgba(234, 240, 255, .7);
+}
+
+.hero-title {
+    margin: 0 0 12px;
+    font-size: clamp(36px, 5vw, 56px);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    color: #ffffff;
+}
+
+.hero-subtitle {
+    margin: 0 0 20px;
+    font-size: clamp(15px, 1.6vw, 18px);
+    line-height: 1.6;
+    color: rgba(234, 240, 255, .72);
+    max-width: 62ch;
+}
+
+.hero-ctas {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+
+.btn-hero {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 46px;
+    padding: 0 18px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 15px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: transform .12s ease, filter .12s ease;
+}
+
+.btn-hero:active {
+    transform: translateY(1px);
+}
+
+.btn-primary {
+    color: #0b1220;
+    background: linear-gradient(135deg, #6d5efc, #36d6ff);
+    box-shadow: 0 16px 44px rgba(54, 214, 255, .18);
+}
+
+.btn-primary:hover {
+    filter: brightness(1.1);
+}
+
+.btn-ghost {
+    color: #eaf0ff;
+    background: rgba(255, 255, 255, .06);
+    border-color: rgba(255, 255, 255, .12);
+}
+
+.btn-ghost:hover {
+    background: rgba(255, 255, 255, .10);
+}
+
+.hero-meta {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+    font-size: 13px;
+    color: rgba(234, 240, 255, .68);
+}
+
+@media (max-width: 768px) {
+    .hero-ctas {
+        flex-direction: column;
+    }
+
+    .btn-hero {
+        width: 100%;
+    }
+}

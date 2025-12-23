@@ -1,4 +1,4 @@
-import React from 'react';
+  import React from 'react';
 
 const StatCard = ({ title, value, color = '#667eea' }) => {
   return (

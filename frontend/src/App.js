@@ -1,13 +1,19 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
-import MapPage from './pages/MapPage';
-import AnalysisPage from './pages/AnalysisPage';
-import HistoryPage from './pages/HistoryPage';
-import AdminPage from './pages/AdminPage';
+import React from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+
+import Header from "./components/Header";
+
+import LandingPage from "./pages/LandingPage";
+import Dashboard from "./pages/Dashboard";
+import MapPage from "./pages/MapPage";
+import AnalysisPage from "./pages/AnalysisPage";
+import HistoryPage from "./pages/HistoryPage";
+import AdminPage from "./pages/AdminPage";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+
 import { storage } from './utils/auth';
+import "./App.css";
 
 function App() {
   const ProtectedRoute = ({ children }) => {
@@ -16,41 +22,49 @@ function App() {
 
   return (
     <Router>
-      <Routes>
-        <Route path="/" element={<Navigate to="/login" />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        
-        <Route path="/dashboard" element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/map" element={
-          <ProtectedRoute>
-            <MapPage />
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/analysis" element={
-          <ProtectedRoute>
-            <AnalysisPage />
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/history" element={
-          <ProtectedRoute>
-            <HistoryPage />
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/admin" element={
-          <ProtectedRoute>
-            <AdminPage />
-          </ProtectedRoute>
-        } />
-      </Routes>
+      <div className="appShell">
+        <Header />
+
+        <div className="appContent">
+          <Routes>
+            {/* Landing page tanpa login */}
+            <Route path="/" element={<LandingPage />} />
+
+            {/* Auth routes */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+
+            {/* Protected routes */}
+            <Route path="/dashboard" element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/map" element={
+              <ProtectedRoute>
+                <MapPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/analysis" element={
+              <ProtectedRoute>
+                <AnalysisPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/history" element={
+              <ProtectedRoute>
+                <HistoryPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin" element={
+              <ProtectedRoute>
+                <AdminPage />
+              </ProtectedRoute>
+            } />
+
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </div>
+      </div>
     </Router>
   );
 }

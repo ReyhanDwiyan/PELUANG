@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
-import Sidebar from '../components/Sidebar';
 import { markerAPI } from '../services/api';
 import { requireAuth } from '../utils/auth';
+// PASTIKAN TIDAK ADA: import Sidebar from '../components/Sidebar';
 import 'leaflet/dist/leaflet.css';
 import '../styles/MapPage.css';
 
@@ -34,13 +34,13 @@ function LocationMarker({ onAddMarker }) {
   useMapEvents({
     click(e) {
       const { lat, lng } = e.latlng;
-      
+
       // Cek apakah lokasi dalam batas area
       const [southwest, northeast] = BANDUNG_BOUNDS;
-      const isInBounds = 
-        lat >= southwest[0] && 
-        lat <= northeast[0] && 
-        lng >= southwest[1] && 
+      const isInBounds =
+        lat >= southwest[0] &&
+        lat <= northeast[0] &&
+        lng >= southwest[1] &&
         lng <= northeast[1];
 
       if (!isInBounds) {
@@ -184,10 +184,9 @@ const MapPage = () => {
   const ulbiCenter = [-6.8755, 107.5772];
 
   return (
-    <div className="dashboard-container">
-      <Sidebar />
-      
-      <main className="main-content">
+    <div className="map-container">
+
+      <main className="map-content">
         <header className="content-header">
           <h1>Peta Interaktif - Area ULBI Bandung</h1>
           <p className="subtitle">Klik pada peta untuk menambahkan marker baru (area sekitar kampus ULBI)</p>
@@ -225,7 +224,7 @@ const MapPage = () => {
                         {marker.description && <p>{marker.description}</p>}
                         {marker.address && <p className="marker-address">📍 {marker.address}</p>}
                         {marker.rating > 0 && <p className="marker-rating">⭐ {marker.rating}</p>}
-                        <button 
+                        <button
                           className="btn-delete-marker"
                           onClick={() => handleDeleteMarker(marker._id)}
                         >
@@ -247,7 +246,7 @@ const MapPage = () => {
             <div className="add-marker-form">
               <div className="form-header">
                 <h3>Tambah Marker Baru</h3>
-                <button 
+                <button
                   className="btn-close"
                   onClick={() => {
                     setShowAddForm(false);
@@ -261,8 +260,8 @@ const MapPage = () => {
               <form onSubmit={handleSubmit}>
                 <div className="form-group">
                   <label>Lokasi</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={selectedLocation ? `${selectedLocation.lat.toFixed(6)}, ${selectedLocation.lng.toFixed(6)}` : ''}
                     readOnly
                     className="location-input"
@@ -337,8 +336,8 @@ const MapPage = () => {
                   <button type="submit" className="btn btn-primary">
                     Simpan Marker
                   </button>
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     className="btn btn-secondary"
                     onClick={() => {
                       setShowAddForm(false);
@@ -357,8 +356,8 @@ const MapPage = () => {
             <h3>Daftar Marker ({markers.length})</h3>
             <div className="markers-grid">
               {markers.map((marker) => (
-                <div 
-                  key={marker._id} 
+                <div
+                  key={marker._id}
                   className="marker-card"
                   style={{ borderLeftColor: getCategoryColor(marker.category) }}
                 >
@@ -371,7 +370,7 @@ const MapPage = () => {
                   </p>
                   {marker.description && <p className="marker-desc">{marker.description}</p>}
                   {marker.rating > 0 && <p className="marker-rating">⭐ {marker.rating}</p>}
-                  <button 
+                  <button
                     className="btn-delete-small"
                     onClick={() => handleDeleteMarker(marker._id)}
                   >

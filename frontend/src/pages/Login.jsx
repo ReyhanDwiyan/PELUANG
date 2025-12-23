@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authAPI } from '../services/api';
 import { storage } from '../utils/auth';
@@ -13,12 +13,6 @@ const Login = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (storage.isAuthenticated()) {
-      navigate('/dashboard');
-    }
-  }, [navigate]);
-
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -28,49 +22,26 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
+    setLoading(true);
 
     try {
-      console.log('Attempting login with:', formData.email);
-
-      const response = await authAPI.login({
-        email: formData.email,
-        password: formData.password
-      });
-
-      console.log('Login response:', response.data);
+      const response = await authAPI.login(formData);
 
       if (response.data.success) {
-        const { data: userData, token } = response.data;
-
-        // 1. Simpan user data ke localStorage
+        const userData = response.data.data;
         storage.setUser(userData);
 
-        // 2. Simpan token ke localStorage
-        if (token) {
-          localStorage.setItem('token', token);
-          console.log('Token saved:', token.substring(0, 20) + '...');
+        if (userData.token) {
+          localStorage.setItem('token', userData.token);
         }
 
-        console.log('Login successful, user data:', userData);
-
-        alert('Login berhasil!');
         navigate('/dashboard');
+      } else {
+        setError(response.data.message || 'Login gagal.');
       }
     } catch (error) {
-      console.error('Login error:', error);
-
-      if (error.response) {
-        console.error('Error response:', error.response.data);
-        setError(error.response.data.message || 'Login gagal');
-      } else if (error.request) {
-        console.error('No response from server');
-        setError('Tidak dapat terhubung ke server. Pastikan backend berjalan.');
-      } else {
-        console.error('Error:', error.message);
-        setError('Terjadi kesalahan: ' + error.message);
-      }
+      setError(error.response?.data?.message || 'Login gagal. Coba lagi nanti.');
     } finally {
       setLoading(false);
     }

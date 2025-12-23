@@ -2,9 +2,8 @@
 
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Sidebar from '../components/Sidebar';
 import { requireAuth } from '../utils/auth';
-import '../styles/Dashboard.css';
+import '../styles/GlobalPages.css';
 
 const HistoryPage = () => {
     const navigate = useNavigate();
@@ -14,19 +13,22 @@ const HistoryPage = () => {
     }, [navigate]);
 
     return (
-        <div className="dashboard-container">
-            <Sidebar />
-            <main className="main-content">
-                <header className="content-header">
-                    <h1>Riwayat Analisis</h1>
+        <div className="page-wrapper">
+            <div className="page-container">
+                <header className="page-header">
+                    <h1 className="page-title">Riwayat</h1>
+                    <p className="page-subtitle">Riwayat aktivitas dan analisis</p>
                 </header>
-                <div className="content-section">
-                    <div className="content-card">
-                        <h2>Riwayat Analisis</h2>
-                        <p>Belum ada riwayat analisis.</p>
+
+                <div className="card">
+                    <div className="card-header">
+                        <h2 className="card-title">Riwayat Aktivitas</h2>
+                    </div>
+                    <div className="card-body">
+                        <p className="empty-message">Belum ada riwayat aktivitas.</p>
                     </div>
                 </div>
-            </main>
+            </div>
         </div>
     );
 };

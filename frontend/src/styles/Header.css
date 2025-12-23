@@ -1,0 +1,126 @@
+.topnav {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: #3f434b;
+    border-bottom: 1px solid rgba(255, 255, 255, .08);
+}
+
+.topnav__inner {
+    height: 64px;
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    padding: 0 18px;
+}
+
+.topnav__brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+}
+
+.topnav__mark {
+    width: 28px;
+    height: 28px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #6d5efc, #36d6ff);
+    box-shadow: 0 12px 28px rgba(54, 214, 255, .15);
+}
+
+.topnav__name {
+    font-size: 34px;
+    font-weight: 800;
+    letter-spacing: .5px;
+    color: #ffffff;
+}
+
+.topnav__links {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    margin-left: 10px;
+}
+
+.topnav__links a {
+    color: rgba(255, 255, 255, .82);
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 14px;
+    padding: 10px 8px;
+    border-radius: 10px;
+}
+
+.topnav__links a:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, .06);
+}
+
+.topnav__links a.isActive {
+    color: #ffffff;
+    background: rgba(255, 255, 255, .10);
+}
+
+.topnav__right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.topnav__login {
+    color: rgba(255, 255, 255, .82);
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 14px;
+    padding: 10px 14px;
+    border-radius: 10px;
+}
+
+.topnav__login:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, .06);
+}
+
+.topnav__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 40px;
+    padding: 0 18px;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 14px;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    transition: filter .12s ease;
+}
+
+.topnav__register {
+    color: #0b1220;
+    background: linear-gradient(135deg, #6d5efc, #36d6ff);
+    box-shadow: 0 12px 28px rgba(54, 214, 255, .18);
+}
+
+.topnav__register:hover {
+    filter: brightness(1.1);
+}
+
+.topnav__logout {
+    color: #ffffff;
+    background: rgba(239, 68, 68, .85);
+}
+
+.topnav__logout:hover {
+    background: rgba(239, 68, 68, 1);
+}
+
+@media (max-width: 900px) {
+    .topnav__links {
+        overflow-x: auto;
+        white-space: nowrap;
+        gap: 10px;
+    }
+}

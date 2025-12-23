@@ -12,15 +12,14 @@ body {
 }
 
 .dashboard-container {
-    display: flex;
     min-height: 100vh;
+    background: #f5f7fa;
 }
 
 .main-content {
-    flex: 1;
-    padding: 30px;
+    width: 100%;
+    padding: 24px;
     overflow-y: auto;
-    background: #f5f7fa;
 }
 
 .content-header {
