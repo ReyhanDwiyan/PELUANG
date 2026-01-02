@@ -15,7 +15,11 @@ connectDB();
 
 // CORS Configuration - PERBAIKI INI
 app.use(cors({
-  origin: 'http://localhost:3000', // Frontend URL
+  origin: function(origin, callback) {
+    // Allow requests with no origin (Postman, curl, dll)
+    if (!origin) return callback(null, true);
+    callback(null, true); // Sementara allow all untuk testing
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'user-id']
@@ -53,21 +57,7 @@ app.use((req, res) => {
   });
 });
 
-// Export untuk Vercel Serverless
-module.exports = app;
-
-// Hanya jalankan server jika bukan di Vercel
-if (process.env.NODE_ENV !== 'production') {
-  const PORT = process.env.PORT || 5000;
-  
-  connectDatabase()
-    .then(() => {
-      app.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}`);
-      });
-    })
-    .catch((err) => {
-      console.error('Failed to connect to database:', err);
-      process.exit(1);
-    });
-}
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+});
