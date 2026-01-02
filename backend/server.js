@@ -47,9 +47,6 @@ app.get('/', (req, res) => {
 });
 
 // Error Handler
-app.use(errorHandler);
-
-// 404 Handler
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -57,7 +54,13 @@ app.use((req, res) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-});
+// Export untuk Vercel
+module.exports = app;
+
+// Local development only
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  });
+}
