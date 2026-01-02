@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { storage } from '../utils/auth';
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = 'https://peluang-backend.vercel.app/api';
 
 const api = axios.create({
   baseURL: API_URL,
