@@ -81,7 +81,8 @@ export const spatialDataAPI = {
   create: (data) => api.post('/spatial-data', data),
   update: (id, data) => api.put(`/spatial-data/${id}`, data),
   delete: (id) => api.delete(`/spatial-data/${id}`),
-  getStatistics: () => api.get('/spatial-data/statistics')
+  getStatistics: () => api.get('/spatial-data/statistics'),
+  predict: (data) => api.post('/spatial-data/predict', data),
 };
 
 export default api;

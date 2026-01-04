@@ -7,7 +7,43 @@ const Marker = require('../models/Marker');
 // @desc    CREATE - Tambah data spasial
 // @route   POST /api/spatial-data
 // @access  Private/Admin
+exports.createSpatialData = async (req, res) => {
+  try {
+    // DEBUG: log user dan body
+    console.log('REQ.USER:', req.user);
+    console.log('REQ.BODY:', req.body);
 
+    const { markerId, averageAge, averageIncome, populationDensity, roadAccessibility } = req.body;
+
+    // Validasi input
+    if (!markerId || averageAge === undefined || averageIncome === undefined || populationDensity === undefined || roadAccessibility === undefined) {
+      return res.status(400).json({ success: false, message: 'Semua field wajib diisi.' });
+    }
+
+    // Pastikan req.user ada dan _id valid
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({ success: false, message: 'User tidak ditemukan atau belum login.' });
+    }
+
+    const data = {
+      markerId,
+      averageAge,
+      averageIncome,
+      populationDensity,
+      roadAccessibility,
+      createdBy: req.user._id // <-- PENTING: gunakan _id
+    };
+
+    // DEBUG: log data yang akan disimpan
+    console.log('SpatialData input:', data);
+
+    const newSpatial = await SpatialData.create(data);
+    res.json({ success: true, data: newSpatial });
+  } catch (err) {
+    console.error('SpatialData CREATE ERROR:', err); // WAJIB
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
 
 // @desc    READ ALL - Get all spatial data
 // @route   GET /api/spatial-data

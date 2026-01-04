@@ -60,6 +60,7 @@ function App() {
                 <AdminPage />
               </ProtectedRoute>
             } />
+            <Route path="/analisis-potensi" element={<AnalysisPage />} />
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

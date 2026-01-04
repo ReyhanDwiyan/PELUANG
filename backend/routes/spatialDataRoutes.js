@@ -13,7 +13,7 @@ router.get('/statistics', spatialDataController.getStatistics);   // <-- PROTECT
 
 // Admin only routes
 // Catatan: Middleware 'protect' harus selalu mendahului 'isAdmin'
-router.post('/', spatialDataController.createSpatialData);
+router.post('/', protect, isAdmin, spatialDataController.createSpatialData);
 router.put('/:id', spatialDataController.updateSpatialData);
 router.delete('/:id', spatialDataController.deleteSpatialData);
 // router.post(

@@ -153,7 +153,7 @@ const AdminPage = () => {
             minimumFractionDigits: 0
         }).format(value);
     };
-    
+
     if (loading) {
         return (
             <div className="dashboard-container">
@@ -386,7 +386,7 @@ const AdminPage = () => {
                     </div>
                 </div>
 
-                
+
             </div>
         </div>
     );

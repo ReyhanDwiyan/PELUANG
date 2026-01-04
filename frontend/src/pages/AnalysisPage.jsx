@@ -1,39 +1,78 @@
-/* AnalysisPage.jsx */
+import React, { useState } from 'react';
+import { spatialDataAPI } from '../services/api';
 
-import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { requireAuth } from '../utils/auth';
-import '../styles/GlobalPages.css';
+const AnalisisPotensiPage = () => {
+  const [form, setForm] = useState({
+    latitude: '',
+    longitude: '',
+    category: '',
+    price: ''
+  });
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-const AnalysisPage = () => {
-    const navigate = useNavigate();
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
 
-    useEffect(() => {
-        requireAuth(navigate);
-    }, [navigate]);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setResult(null);
+    try {
+      const res = await spatialDataAPI.predict({
+        latitude: parseFloat(form.latitude),
+        longitude: parseFloat(form.longitude),
+        category: form.category,
+        price: parseFloat(form.price)
+      });
+      setResult(res.data);
+    } catch (err) {
+      setResult({ success: false, message: err.response?.data?.message || 'Gagal prediksi' });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    return (
-        <div className="page-wrapper">
-            <div className="page-container">
-                <header className="page-header">
-                    <h1 className="page-title">Analisis Potensi</h1>
-                    <p className="page-subtitle">Analisis data spasial dan potensi usaha</p>
-                </header>
-
-                <div className="card">
-                    <div className="card-header">
-                        <h2 className="card-title">Analisis Potensi Usaha</h2>
-                    </div>
-                    <div className="card-body">
-                        <p>Fitur analisis akan tersedia segera.</p>
-                        <button className="btn btn-primary" style={{ marginTop: '16px' }}>
-                            Mulai Analisis Baru
-                        </button>
-                    </div>
+  return (
+    <div className="page-wrapper">
+      <div className="page-container">
+        <h1>Analisis Potensi Bisnis</h1>
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label>Latitude</label>
+            <input type="number" name="latitude" placeholder="Latitude" value={form.latitude} onChange={handleChange} required step="any" />
+          </div>
+          <div className="form-group">
+            <label>Longitude</label>
+            <input type="number" name="longitude" placeholder="Longitude" value={form.longitude} onChange={handleChange} required step="any" />
+          </div>
+          <div className="form-group">
+            <label>Kategori Bisnis</label>
+            <input type="text" name="category" placeholder="Kategori Bisnis" value={form.category} onChange={handleChange} required />
+          </div>
+          <div className="form-group">
+            <label>Harga Produk</label>
+            <input type="number" name="price" placeholder="Harga Produk" value={form.price} onChange={handleChange} required />
+          </div>
+          <button type="submit" className="btn btn-primary" disabled={loading}>
+            {loading ? 'Menganalisis...' : 'Analisis'}
+          </button>
+        </form>
+        {result && (
+          <div style={{ marginTop: 24 }}>
+            {result.success
+              ? <div>
+                  <h3>Skor Potensi: {result.score} ({result.category})</h3>
+                  <pre>{JSON.stringify(result.detail, null, 2)}</pre>
                 </div>
-            </div>
-        </div>
-    );
+              : <div style={{ color: 'red' }}>{result.message}</div>
+            }
+          </div>
+        )}
+      </div>
+    </div>
+  );
 };
 
-export default AnalysisPage;
+export default AnalisisPotensiPage;
