@@ -1,13 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
-import { markerAPI } from '../services/api';
-import { requireAuth } from '../utils/auth';
-// PASTIKAN TIDAK ADA: import Sidebar from '../components/Sidebar';
+import { markerAPI, spatialDataAPI } from '../services/api';
+import { requireAuth, storage } from '../utils/auth';
 import 'leaflet/dist/leaflet.css';
 import '../styles/MapPage.css';
-
-// Fix Leaflet default icon issue
 import L from 'leaflet';
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -18,24 +15,19 @@ let DefaultIcon = L.icon({
   iconSize: [25, 41],
   iconAnchor: [12, 41]
 });
-
 L.Marker.prototype.options.icon = DefaultIcon;
 
-// Batas Wilayah sekitar ULBI (radius ~3-4 km)
 const BANDUNG_BOUNDS = [
-  [-6.9050, 107.5470], // Southwest (Barat Daya)
-  [-6.8460, 107.6070]  // Northeast (Timur Laut)
+  [-6.9050, 107.5470],
+  [-6.8460, 107.6070]
 ];
 
-// Component to add marker on click
-function LocationMarker({ onAddMarker }) {
+function LocationMarker({ onAddMarker, showMarker }) {
   const [position, setPosition] = useState(null);
 
   useMapEvents({
     click(e) {
       const { lat, lng } = e.latlng;
-
-      // Cek apakah lokasi dalam batas area
       const [southwest, northeast] = BANDUNG_BOUNDS;
       const isInBounds =
         lat >= southwest[0] &&
@@ -53,11 +45,11 @@ function LocationMarker({ onAddMarker }) {
     }
   });
 
-  return position === null ? null : (
+  return showMarker && position ? (
     <Marker position={position}>
       <Popup>Lokasi baru dipilih</Popup>
     </Marker>
-  );
+  ) : null;
 }
 
 const MapPage = () => {
@@ -69,10 +61,16 @@ const MapPage = () => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    category: 'restaurant',
+    category: 'restoran',
     address: '',
     rating: 0
   });
+  const [popup, setPopup] = useState({ show: false, lat: null, lng: null });
+  const [result, setResult] = useState(null);
+
+  // Ambil role user dari storage
+  const user = storage.getUser();
+  const isAdmin = user && user.role === 'admin';
 
   useEffect(() => {
     if (!requireAuth(navigate)) return;
@@ -94,7 +92,9 @@ const MapPage = () => {
 
   const handleMapClick = (latlng) => {
     setSelectedLocation(latlng);
-    setShowAddForm(true);
+    if (isAdmin) setShowAddForm(true);
+    // Untuk user biasa, hanya tampilkan popup analisis potensi
+    if (!isAdmin) setPopup({ show: true, lat: latlng.lat, lng: latlng.lng });
   };
 
   const handleInputChange = (e) => {
@@ -128,7 +128,7 @@ const MapPage = () => {
         setFormData({
           title: '',
           description: '',
-          category: 'restaurant',
+          category: 'restoran',
           address: '',
           rating: 0
         });
@@ -156,28 +156,35 @@ const MapPage = () => {
     }
   };
 
-  const getCategoryIcon = (category) => {
-    const icons = {
-      restaurant: '🍽️',
-      cafe: '☕',
-      shop: '🏪',
-      park: '🌳',
-      office: '🏢',
-      other: '📍'
-    };
-    return icons[category] || '📍';
+  // Handler klik di map
+  function MapClickHandler() {
+    useMapEvents({
+      click(e) {
+        handleMapClick(e.latlng);
+      }
+    });
+    return null;
+  }
+
+  const handleClose = () => {
+    setPopup({ show: false, lat: null, lng: null });
+    setResult(null);
   };
 
-  const getCategoryColor = (category) => {
-    const colors = {
-      restaurant: '#ef4444',
-      cafe: '#f59e0b',
-      shop: '#10b981',
-      park: '#3b82f6',
-      office: '#8b5cf6',
-      other: '#6b7280'
-    };
-    return colors[category] || '#6b7280';
+  const handleAnalyzeSubmit = async (e) => {
+    e.preventDefault();
+    setResult(null);
+    try {
+      const res = await spatialDataAPI.predict({
+        latitude: popup.lat,
+        longitude: popup.lng,
+        category: formData.category,
+        price: parseFloat(formData.rating)
+      });
+      setResult(res.data);
+    } catch (err) {
+      setResult({ success: false, message: err.response?.data?.message || 'Gagal prediksi' });
+    }
   };
 
   // Center: Kampus ULBI Bandung
@@ -185,11 +192,10 @@ const MapPage = () => {
 
   return (
     <div className="map-container">
-
       <main className="map-content">
         <header className="content-header">
           <h1>Peta Interaktif - Area ULBI Bandung</h1>
-          <p className="subtitle">Klik pada peta untuk menambahkan marker baru (area sekitar kampus ULBI)</p>
+          <p className="subtitle">Klik pada peta untuk {isAdmin ? 'menambahkan marker baru' : 'analisis potensi usaha'} (area sekitar kampus ULBI)</p>
         </header>
 
         <div className="map-section">
@@ -219,30 +225,33 @@ const MapPage = () => {
                   >
                     <Popup>
                       <div className="marker-popup">
-                        <h3>{getCategoryIcon(marker.category)} {marker.title}</h3>
+                        <h3>{marker.title}</h3>
                         <p className="marker-category">{marker.category}</p>
                         {marker.description && <p>{marker.description}</p>}
                         {marker.address && <p className="marker-address">📍 {marker.address}</p>}
                         {marker.rating > 0 && <p className="marker-rating">⭐ {marker.rating}</p>}
-                        <button
-                          className="btn-delete-marker"
-                          onClick={() => handleDeleteMarker(marker._id)}
-                        >
-                          🗑️ Hapus
-                        </button>
+                        {isAdmin && (
+                          <button
+                            className="btn-delete-marker"
+                            onClick={() => handleDeleteMarker(marker._id)}
+                          >
+                            🗑️ Hapus
+                          </button>
+                        )}
                       </div>
                     </Popup>
                   </Marker>
                 ))}
 
-                {/* Click to add new marker */}
-                <LocationMarker onAddMarker={handleMapClick} />
+                {/* Marker biru saat klik map */}
+                <LocationMarker onAddMarker={handleMapClick} showMarker={true} />
+                <MapClickHandler />
               </MapContainer>
             )}
           </div>
 
-          {/* Add Marker Form */}
-          {showAddForm && (
+          {/* Add Marker Form - hanya untuk admin */}
+          {isAdmin && showAddForm && (
             <div className="add-marker-form">
               <div className="form-header">
                 <h3>Tambah Marker Baru</h3>
@@ -287,13 +296,11 @@ const MapPage = () => {
                     value={formData.category}
                     onChange={handleInputChange}
                     required
+                    className="custom-select"
                   >
-                    <option value="restaurant">Restaurant</option>
-                    <option value="cafe">Cafe</option>
-                    <option value="shop">Shop</option>
-                    <option value="park">Park</option>
-                    <option value="office">Office</option>
-                    <option value="other">Other</option>
+                    <option value="restoran">Restoran</option>
+                    <option value="warung">Warung</option>
+                    <option value="laundry">Laundry</option>
                   </select>
                 </div>
 
@@ -351,39 +358,55 @@ const MapPage = () => {
             </div>
           )}
 
-          {/* Markers List */}
-          <div className="markers-list">
-            <h3>Daftar Marker ({markers.length})</h3>
-            <div className="markers-grid">
-              {markers.map((marker) => (
-                <div
-                  key={marker._id}
-                  className="marker-card"
-                  style={{ borderLeftColor: getCategoryColor(marker.category) }}
-                >
-                  <div className="marker-card-header">
-                    <span className="marker-icon">{getCategoryIcon(marker.category)}</span>
-                    <h4>{marker.title}</h4>
-                  </div>
-                  <p className="marker-category-badge" style={{ backgroundColor: getCategoryColor(marker.category) }}>
-                    {marker.category}
-                  </p>
-                  {marker.description && <p className="marker-desc">{marker.description}</p>}
-                  {marker.rating > 0 && <p className="marker-rating">⭐ {marker.rating}</p>}
-                  <button
-                    className="btn-delete-small"
-                    onClick={() => handleDeleteMarker(marker._id)}
-                  >
-                    🗑️ Hapus
-                  </button>
+          {/* Popup Analisis Potensi - hanya untuk user biasa */}
+          {!isAdmin && popup.show && (
+            <div className="popup-card">
+              <button className="btn-close" onClick={handleClose}>✕</button>
+              <h3>Analisis Potensi Bisnis</h3>
+              <form onSubmit={handleAnalyzeSubmit}>
+                <div className="form-group">
+                  <label>Latitude</label>
+                  <input type="number" value={popup.lat} disabled />
                 </div>
-              ))}
-
-              {markers.length === 0 && (
-                <p className="empty-message">Belum ada marker. Klik pada peta untuk menambahkan!</p>
+                <div className="form-group">
+                  <label>Longitude</label>
+                  <input type="number" value={popup.lng} disabled />
+                </div>
+                <div className="form-group">
+                  <label>Kategori Bisnis</label>
+                  <select
+                    name="category"
+                    value={formData.category}
+                    onChange={handleInputChange}
+                    required
+                    className="custom-select"
+                  >
+                    <option value="restoran">Restoran</option>
+                    <option value="warung">Warung</option>
+                    <option value="laundry">Laundry</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Harga Produk</label>
+                  <input type="number" name="rating" value={formData.rating} onChange={handleInputChange} required />
+                </div>
+                <button type="submit" className="btn btn-primary" disabled={loading}>
+                  {loading ? 'Menganalisis...' : 'Analisis'}
+                </button>
+              </form>
+              {result && (
+                <div style={{ marginTop: 16 }}>
+                  {result.success
+                    ? <div>
+                      <h4>Skor Potensi: {result.score} ({result.category})</h4>
+                      <pre>{JSON.stringify(result.detail, null, 2)}</pre>
+                    </div>
+                    : <div style={{ color: 'red' }}>{result.message}</div>
+                  }
+                </div>
               )}
             </div>
-          </div>
+          )}
         </div>
       </main>
     </div>

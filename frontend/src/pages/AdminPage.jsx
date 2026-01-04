@@ -135,8 +135,12 @@ const AdminPage = () => {
     };
 
     const getAvailableMarkers = () => {
-        const usedMarkerIds = spatialData.map(sd => sd.markerId._id);
-        return markers.filter(m => !usedMarkerIds.includes(m._id) || (editingData && m._id === formData.markerId));
+        const usedMarkerIds = spatialData
+            .map(sd => sd.markerId && sd.markerId._id)
+            .filter(Boolean);
+        // Filter hanya marker yang valid dan bukan null
+        return markers
+            .filter(m => m && (!usedMarkerIds.includes(m._id) || (editingData && m._id === formData.markerId)));
     };
 
     const getPotentialCategory = (score) => {
@@ -176,7 +180,7 @@ const AdminPage = () => {
                         onClick={() => setShowAddForm(true)}
                         disabled={showAddForm}
                     >
-                        ➕ Tambah Data Spasial
+                        Tambah Data Spasial
                     </button>
                 </div>
 
@@ -201,9 +205,11 @@ const AdminPage = () => {
                                     >
                                         <option value="">-- Pilih Marker --</option>
                                         {getAvailableMarkers().map(marker => (
-                                            <option key={marker._id} value={marker._id}>
-                                                {marker.title} ({marker.category})
-                                            </option>
+                                            marker && marker.title ? (
+                                                <option key={marker._id} value={marker._id}>
+                                                    {marker.title} ({marker.category})
+                                                </option>
+                                            ) : null
                                         ))}
                                     </select>
                                     {editingData && (

@@ -6,7 +6,6 @@ import Header from "./components/Header";
 import LandingPage from "./pages/LandingPage";
 import Dashboard from "./pages/Dashboard";
 import MapPage from "./pages/MapPage";
-import AnalysisPage from "./pages/AnalysisPage";
 import HistoryPage from "./pages/HistoryPage";
 import AdminPage from "./pages/AdminPage";
 import Login from "./pages/Login";
@@ -45,11 +44,6 @@ function App() {
                 <MapPage />
               </ProtectedRoute>
             } />
-            <Route path="/analysis" element={
-              <ProtectedRoute>
-                <AnalysisPage />
-              </ProtectedRoute>
-            } />
             <Route path="/history" element={
               <ProtectedRoute>
                 <HistoryPage />
@@ -60,7 +54,6 @@ function App() {
                 <AdminPage />
               </ProtectedRoute>
             } />
-            <Route path="/analisis-potensi" element={<AnalysisPage />} />
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

@@ -444,6 +444,86 @@
   font-size: 16px;
 }
 
+/* Popup Card - untuk form dan info lebih lanjut */
+.popup-card {
+  position: fixed;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #181e29;
+  color: #fff;
+  border-radius: 16px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.35);
+  padding: 32px 24px 24px 24px;
+  z-index: 9999;
+  min-width: 340px;
+  max-width: 95vw;
+}
+
+.popup-card h3 {
+  margin-top: 0;
+  margin-bottom: 18px;
+  font-size: 1.3em;
+  font-weight: 700;
+}
+
+.popup-card .btn-close {
+  position: absolute;
+  top: 12px;
+  right: 18px;
+  background: none;
+  border: none;
+  color: #ef4444;
+  font-size: 1.5em;
+  cursor: pointer;
+}
+
+.popup-card .form-group {
+  margin-bottom: 16px;
+}
+
+.popup-card label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.popup-card input {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #3b4252;
+  background: #232b3b;
+  color: #fff;
+  font-size: 1em;
+}
+
+.custom-select {
+  background: #232b3b;
+  color: #fff;
+  border: 1.5px solid #6d5efc;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 1em;
+  font-weight: 500;
+  box-shadow: none;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+.custom-select:focus {
+  border-color: #36d6ff;
+  box-shadow: 0 0 0 2px rgba(54, 214, 255, 0.15);
+}
+
+.custom-select option {
+  background: #232b3b;
+  color: #fff;
+}
+
 @media (max-width: 768px) {
   .map-content {
     padding: 16px;

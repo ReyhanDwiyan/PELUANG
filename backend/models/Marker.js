@@ -25,9 +25,9 @@ const markerSchema = new mongoose.Schema({
     max: [180, 'Longitude must be between -180 and 180']
   },
   category: {
-    type: String,
-    enum: ['restaurant', 'hospital', 'school', 'park', 'mall', 'hotel', 'other'],
-    default: 'other'
+  type: String,
+  enum: ['restoran', 'warung', 'laundry'],
+  required: true
   },
   address: {
     type: String,

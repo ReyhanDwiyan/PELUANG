@@ -50,9 +50,6 @@ export default function Header() {
                         <NavLink to="/map" className={({ isActive }) => (isActive ? "isActive" : "")}>
                             Peta Interaktif
                         </NavLink>
-                        <NavLink to="/analysis" className={({ isActive }) => (isActive ? "isActive" : "")}>
-                            Analisis Potensi
-                        </NavLink>
                         <NavLink to="/history" className={({ isActive }) => (isActive ? "isActive" : "")}>
                             Riwayat
                         </NavLink>
