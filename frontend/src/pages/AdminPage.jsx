@@ -153,7 +153,7 @@ const AdminPage = () => {
             minimumFractionDigits: 0
         }).format(value);
     };
-
+    
     if (loading) {
         return (
             <div className="dashboard-container">
@@ -385,9 +385,11 @@ const AdminPage = () => {
                         </ul>
                     </div>
                 </div>
+
+                
             </div>
         </div>
     );
 };
 
-export default AdminPage;
+export default AdminPage

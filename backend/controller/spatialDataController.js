@@ -1,61 +1,13 @@
+const fs = require('fs');
+const { parse } = require('csv-parse');
+const XLSX = require('xlsx');
 const SpatialData = require('../models/SpatialData');
 const Marker = require('../models/Marker');
 
 // @desc    CREATE - Tambah data spasial
 // @route   POST /api/spatial-data
 // @access  Private/Admin
-exports.createSpatialData = async (req, res) => {
-  try {
-    const { 
-      markerId, 
-      averageAge, 
-      averageIncome, 
-      populationDensity, 
-      roadAccessibility 
-    } = req.body;
 
-    // Validasi marker exists
-    const marker = await Marker.findById(markerId);
-    if (!marker) {
-      return res.status(404).json({
-        success: false,
-        message: 'Marker tidak ditemukan'
-      });
-    }
-
-    // Cek apakah data spasial sudah ada untuk marker ini
-    const existingData = await SpatialData.findOne({ markerId });
-    if (existingData) {
-      return res.status(400).json({
-        success: false,
-        message: 'Data spasial untuk marker ini sudah ada. Gunakan update untuk mengubah.'
-      });
-    }
-
-    const spatialData = new SpatialData({
-      markerId,
-      averageAge,
-      averageIncome,
-      populationDensity,
-      roadAccessibility,
-      createdBy: req.user.id // <-- Mengambil ID user dari token
-    });
-
-    await spatialData.save();
-
-    res.status(201).json({
-      success: true,
-      message: 'Data spasial berhasil ditambahkan',
-      data: spatialData
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Error creating spatial data',
-      error: error.message
-    });
-  }
-};
 
 // @desc    READ ALL - Get all spatial data
 // @route   GET /api/spatial-data
@@ -115,11 +67,11 @@ exports.getSpatialDataByMarker = async (req, res) => {
 // @access  Private/Admin
 exports.updateSpatialData = async (req, res) => {
   try {
-    const { 
-      averageAge, 
-      averageIncome, 
-      populationDensity, 
-      roadAccessibility 
+    const {
+      averageAge,
+      averageIncome,
+      populationDensity,
+      roadAccessibility
     } = req.body;
 
     const spatialData = await SpatialData.findById(req.params.id);
@@ -136,7 +88,7 @@ exports.updateSpatialData = async (req, res) => {
     if (averageIncome !== undefined) spatialData.averageIncome = averageIncome;
     if (populationDensity !== undefined) spatialData.populationDensity = populationDensity;
     if (roadAccessibility !== undefined) spatialData.roadAccessibility = roadAccessibility;
-    
+
     spatialData.updatedAt = Date.now();
 
     await spatialData.save(); // Pre-save hook akan recalculate potentialScore
@@ -220,5 +172,122 @@ exports.getStatistics = async (req, res) => {
       message: 'Error fetching statistics',
       error: error.message
     });
+  }
+};
+
+exports.uploadSpatialData = async (req, res) => {
+  try {
+    const file = req.file;
+    if (!file) return res.status(400).json({ message: 'No file uploaded' });
+
+    let records = [];
+    if (file.mimetype === 'text/csv' || file.originalname.endsWith('.csv')) {
+      const parser = fs.createReadStream(file.path).pipe(parse({ columns: true, skip_empty_lines: true }));
+      for await (const record of parser) {
+        records.push(record);
+      }
+    } else if (
+      file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+      file.mimetype === 'application/vnd.ms-excel' ||
+      file.originalname.endsWith('.xlsx')
+    ) {
+      const workbook = XLSX.readFile(file.path);
+      const sheetName = workbook.SheetNames[0];
+      records = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+    } else {
+      return res.status(400).json({ message: 'Unsupported file type' });
+    }
+
+    // Tambahkan createdBy ke setiap record
+    const userId = req.user.id;
+    records = records.map(r => ({
+      ...r,
+      createdBy: userId
+    }));
+
+    const inserted = await SpatialData.insertMany(records);
+    fs.unlinkSync(file.path); // Hapus file setelah diproses
+    res.json({ message: 'Data uploaded successfully', count: inserted.length });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+}
+/**
+ * @desc    Prediksi potensi bisnis berdasarkan lokasi, kategori, harga produk
+ * @route   POST /api/spatial-data/predict
+ * @access  Public/User
+ * @body    { latitude, longitude, category, price }
+ */
+exports.predictBusinessPotential = async (req, res) => {
+  try {
+    const { latitude, longitude, category, price } = req.body;
+    if (
+      typeof latitude !== 'number' ||
+      typeof longitude !== 'number' ||
+      !category ||
+      typeof price !== 'number'
+    ) {
+      return res.status(400).json({ success: false, message: 'Invalid input' });
+    }
+
+    // Ambil data spasial terdekat (radius 2km)
+    const spatial = await SpatialData.aggregate([
+      {
+        $lookup: {
+          from: 'markers',
+          localField: 'markerId',
+          foreignField: '_id',
+          as: 'marker'
+        }
+      },
+      { $unwind: '$marker' },
+      {
+        $addFields: {
+          distance: {
+            $sqrt: {
+              $add: [
+                { $pow: [{ $subtract: ['$marker.latitude', latitude] }, 2] },
+                { $pow: [{ $subtract: ['$marker.longitude', longitude] }, 2] }
+              ]
+            }
+          }
+        }
+      },
+      { $sort: { distance: 1 } },
+      { $limit: 1 }
+    ]);
+
+    if (!spatial.length) {
+      return res.status(404).json({ success: false, message: 'No nearby data found' });
+    }
+
+    const data = spatial[0];
+
+    // Rumus skor (sesuaikan dengan kebutuhan)
+    let score = 0;
+    score += (100 - data.averageAge) * 0.25;
+    score += (data.averageIncome / 10000000) * 25;
+    score += (data.populationDensity / 10000) * 25;
+    score += (data.roadAccessibility / 5) * 25;
+
+    // Kategori
+    let categoryLabel = 'Rendah';
+    if (score >= 75) categoryLabel = 'Sangat Tinggi';
+    else if (score >= 60) categoryLabel = 'Tinggi';
+    else if (score >= 40) categoryLabel = 'Sedang';
+
+    res.json({
+      success: true,
+      score: Math.round(score),
+      category: categoryLabel,
+      detail: {
+        averageAge: data.averageAge,
+        averageIncome: data.averageIncome,
+        populationDensity: data.populationDensity,
+        roadAccessibility: data.roadAccessibility
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 };

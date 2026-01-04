@@ -18,7 +18,7 @@ const protect = async (req, res, next) => {
     try {
       const userId = req.headers['user-id'];
       const user = await User.findById(userId).select('-password');
-      
+
       if (!user) {
         return res.status(401).json({
           success: false,
@@ -47,7 +47,7 @@ const protect = async (req, res, next) => {
   try {
     // Verifikasi Token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
+
     // Cari user berdasarkan ID di token
     const user = await User.findById(decoded.id).select('-password');
 
@@ -60,7 +60,7 @@ const protect = async (req, res, next) => {
 
     // Attach user ke request
     req.user = user;
-    
+
     next();
   } catch (error) {
     console.error('Token verification error:', error);
@@ -82,4 +82,8 @@ const isAdmin = (req, res, next) => {
   next();
 };
 
-module.exports = { protect, isAdmin };
+module.exports = {
+  protect,
+  isAdmin,
+  // ...middleware lain jika ada
+};
