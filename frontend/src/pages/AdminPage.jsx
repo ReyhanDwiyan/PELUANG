@@ -21,6 +21,7 @@ const AdminPage = () => {
         populationDensity: '',
         roadAccessibility: '3'
     });
+    const [breakdownData, setBreakdownData] = useState(null);
 
     useEffect(() => {
         if (!requireAdmin(navigate)) return;
@@ -351,16 +352,17 @@ const AdminPage = () => {
                                                             className="btn-edit"
                                                             onClick={() => handleEdit(data)}
                                                             title="Edit"
-                                                        >
-                                                            ✏️
-                                                        </button>
+                                                        >✏️</button>
                                                         <button
                                                             className="btn-delete"
                                                             onClick={() => handleDelete(data._id)}
                                                             title="Hapus"
-                                                        >
-                                                            🗑️
-                                                        </button>
+                                                        >🗑️</button>
+                                                        <button
+                                                            className="btn-secondary"
+                                                            onClick={() => setBreakdownData(data)}
+                                                            title="Detail Skor"
+                                                        >🔍</button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -372,27 +374,20 @@ const AdminPage = () => {
                     )}
                 </div>
 
-                {/* Info Panel */}
-                <div className="info-panel">
-                    <div className="info-card">
-                        <h4>ℹ️ Cara Kerja Perhitungan Skor Potensi</h4>
+                {/* Breakdown Popup */}
+                {breakdownData && (
+                    <div className="popup-card">
+                        <button className="btn-close" onClick={() => setBreakdownData(null)}>✕</button>
+                        <h3>Breakdown Skor Potensi</h3>
                         <ul>
-                            <li><strong>Umur Rata-rata (25%)</strong>: Semakin muda, semakin potensial</li>
-                            <li><strong>Penghasilan Rata-rata (25%)</strong>: Semakin tinggi, semakin potensial</li>
-                            <li><strong>Kepadatan Penduduk (25%)</strong>: Semakin padat, semakin potensial</li>
-                            <li><strong>Aksesibilitas Jalan (25%)</strong>: Semakin mudah diakses, semakin potensial</li>
-                        </ul>
-                        <p><strong>Total Skor: 0-100</strong></p>
-                        <ul>
-                            <li>🟢 75-100: Sangat Tinggi</li>
-                            <li>🔵 60-74: Tinggi</li>
-                            <li>🟡 40-59: Sedang</li>
-                            <li>🔴 0-39: Rendah</li>
+                            <li>Umur: {((100 - breakdownData.averageAge) / 100 * 25).toFixed(2)} / 25</li>
+                            <li>Penghasilan: {(Math.min(breakdownData.averageIncome / 10000000, 1) * 25).toFixed(2)} / 25</li>
+                            <li>Kepadatan: {(Math.min(breakdownData.populationDensity / 10000, 1) * 25).toFixed(2)} / 25</li>
+                            <li>Akses Jalan: {((breakdownData.roadAccessibility / 5) * 25).toFixed(2)} / 25</li>
+                            <li><strong>Total: {breakdownData.potentialScore} / 100</strong></li>
                         </ul>
                     </div>
-                </div>
-
-
+                )}
             </div>
         </div>
     );

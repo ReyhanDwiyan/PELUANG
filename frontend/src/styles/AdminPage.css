@@ -223,3 +223,29 @@
   background-size: 20px 20px;
   padding-right: 40px;
 }
+
+.popup-card {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #181e29;
+  color: #fff;
+  border-radius: 16px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.35);
+  padding: 32px 24px 24px 24px;
+  z-index: 9999;
+  min-width: 340px;
+  max-width: 95vw;
+}
+
+.popup-card .btn-close {
+  position: absolute;
+  top: 12px;
+  right: 18px;
+  background: none;
+  border: none;
+  color: #ef4444;
+  font-size: 1.5em;
+  cursor: pointer;
+}
