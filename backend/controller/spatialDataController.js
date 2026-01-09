@@ -3,6 +3,9 @@ const { parse } = require('csv-parse');
 const XLSX = require('xlsx');
 const SpatialData = require('../models/SpatialData');
 const Marker = require('../models/Marker');
+const DemographicData = require('../models/DemographicData');
+const EconomicData = require('../models/EconomicData');
+const InfrastructureData = require('../models/InfrastructureData');
 
 // @desc    CREATE - Tambah data spasial
 // @route   POST /api/spatial-data
@@ -325,5 +328,147 @@ exports.predictBusinessPotential = async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+exports.getAllCombinedData = async (req, res) => {
+  try {
+    const [demographics, economics, infrastructures] = await Promise.all([
+      DemographicData.find().populate('markerId'),
+      EconomicData.find().populate('markerId'),
+      InfrastructureData.find().populate('markerId')
+    ]);
+
+    const combinedMap = new Map();
+
+    demographics.forEach(d => {
+      if (d.markerId) {
+        combinedMap.set(d.markerId._id.toString(), {
+          _id: d._id,
+          markerId: d.markerId,
+          averageAge: d.averageAge,
+          populationDensity: d.populationDensity,
+          averageIncome: 0,
+          roadAccessibility: 0,
+          createdAt: d.createdAt,
+          updatedAt: d.updatedAt
+        });
+      }
+    });
+
+    economics.forEach(e => {
+      if (e.markerId) {
+        const key = e.markerId._id.toString();
+        if (combinedMap.has(key)) {
+          combinedMap.get(key).averageIncome = e.averageIncome;
+        } else {
+          combinedMap.set(key, {
+            _id: e._id,
+            markerId: e.markerId,
+            averageAge: 0,
+            populationDensity: 0,
+            averageIncome: e.averageIncome,
+            roadAccessibility: 0,
+            createdAt: e.createdAt,
+            updatedAt: e.updatedAt
+          });
+        }
+      }
+    });
+
+    infrastructures.forEach(i => {
+      if (i.markerId) {
+        const key = i.markerId._id.toString();
+        if (combinedMap.has(key)) {
+          combinedMap.get(key).roadAccessibility = i.roadAccessibility;
+        } else {
+          combinedMap.set(key, {
+            _id: i._id,
+            markerId: i.markerId,
+            averageAge: 0,
+            populationDensity: 0,
+            averageIncome: 0,
+            roadAccessibility: i.roadAccessibility,
+            createdAt: i.createdAt,
+            updatedAt: i.updatedAt
+          });
+        }
+      }
+    });
+
+    const combinedData = Array.from(combinedMap.values()).map(item => {
+      const ageScore = ((100 - item.averageAge) / 100) * 25;
+      const incomeScore = Math.min(item.averageIncome / 10000000, 1) * 25;
+      const densityScore = Math.min(item.populationDensity / 10000, 1) * 25;
+      const accessScore = (item.roadAccessibility / 5) * 25;
+      const potentialScore = Math.round(ageScore + incomeScore + densityScore + accessScore);
+
+      return {
+        ...item,
+        potentialScore
+      };
+    });
+
+    res.json({
+      success: true,
+      data: combinedData
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Gagal mengambil data gabungan',
+      error: error.message
+    });
+  }
+};
+
+exports.getCombinedDataByMarkerId = async (req, res) => {
+  try {
+    const { markerId } = req.params;
+
+    const [demographic, economic, infrastructure] = await Promise.all([
+      DemographicData.findOne({ markerId }).populate('markerId'),
+      EconomicData.findOne({ markerId }).populate('markerId'),
+      InfrastructureData.findOne({ markerId }).populate('markerId')
+    ]);
+
+    if (!demographic && !economic && !infrastructure) {
+      return res.status(404).json({
+        success: false,
+        message: 'Data tidak ditemukan untuk marker ini'
+      });
+    }
+
+    const averageAge = demographic?.averageAge || 0;
+    const averageIncome = economic?.averageIncome || 0;
+    const populationDensity = demographic?.populationDensity || 0;
+    const roadAccessibility = infrastructure?.roadAccessibility || 0;
+
+    const ageScore = ((100 - averageAge) / 100) * 25;
+    const incomeScore = Math.min(averageIncome / 10000000, 1) * 25;
+    const densityScore = Math.min(populationDensity / 10000, 1) * 25;
+    const accessScore = (roadAccessibility / 5) * 25;
+    const potentialScore = Math.round(ageScore + incomeScore + densityScore + accessScore);
+
+    res.json({
+      success: true,
+      data: {
+        _id: demographic?._id || economic?._id || infrastructure?._id,
+        markerId: demographic?.markerId || economic?.markerId || infrastructure?.markerId,
+        averageAge,
+        averageIncome,
+        populationDensity,
+        roadAccessibility,
+        potentialScore,
+        createdAt: demographic?.createdAt || economic?.createdAt || infrastructure?.createdAt,
+        updatedAt: demographic?.updatedAt || economic?.updatedAt || infrastructure?.updatedAt
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Gagal mengambil data gabungan',
+      error: error.message
+    });
   }
 };

@@ -85,4 +85,34 @@ export const spatialDataAPI = {
   predict: (data) => api.post('/spatial-data/predict', data),
 };
 
+export const demographicAPI = {
+  create: (data) => api.post('/demographic', data),
+  getAll: () => api.get('/demographic'),
+  getByMarkerId: (markerId) => api.get(`/demographic/marker/${markerId}`),
+  update: (id, data) => api.put(`/demographic/${id}`, data),
+  delete: (id) => api.delete(`/demographic/${id}`)
+};
+
+export const economicAPI = {
+  create: (data) => api.post('/economic', data),
+  getAll: () => api.get('/economic'),
+  getByMarkerId: (markerId) => api.get(`/economic/marker/${markerId}`),
+  update: (id, data) => api.put(`/economic/${id}`, data),
+  delete: (id) => api.delete(`/economic/${id}`)
+};
+
+export const infrastructureAPI = {
+  create: (data) => api.post('/infrastructure', data),
+  getAll: () => api.get('/infrastructure'),
+  getByMarkerId: (markerId) => api.get(`/infrastructure/marker/${markerId}`),
+  update: (id, data) => api.put(`/infrastructure/${id}`, data),
+  delete: (id) => api.delete(`/infrastructure/${id}`)
+};
+
+// Untuk data gabungan
+export const combinedDataAPI = {
+  getAll: () => api.get('/spatial-data/combined'),
+  getByMarkerId: (markerId) => api.get(`/spatial-data/combined/marker/${markerId}`)
+};
+
 export default api;

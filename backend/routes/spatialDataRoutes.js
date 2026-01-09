@@ -7,9 +7,12 @@ const multer = require('multer');
 const upload = multer({ dest: 'uploads/' });
 
 // Public routes (Sekarang Terproteksi)
-router.get('/', spatialDataController.getAllSpatialData);           // <-- PROTECT
-router.get('/marker/:markerId', spatialDataController.getSpatialDataByMarker); // <-- PROTECT
-router.get('/statistics', spatialDataController.getStatistics);   // <-- PROTECT
+router.get('/combined', protect, spatialDataController.getAllCombinedData);
+router.get('/combined/marker/:markerId', protect, spatialDataController.getCombinedDataByMarkerId);
+router.get('/', protect, spatialDataController.getAllSpatialData);           // <-- PROTECT
+router.get('/marker/:markerId', protect, spatialDataController.getSpatialDataByMarker); // <-- PROTECT
+router.get('/statistics', protect, spatialDataController.getStatistics);   // <-- PROTECT
+
 
 // Admin only routes
 // Catatan: Middleware 'protect' harus selalu mendahului 'isAdmin'

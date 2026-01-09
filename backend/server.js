@@ -35,7 +35,10 @@ app.use(morgan('dev'));
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/markers', require('./routes/markerRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
-app.use('/api/spatial-data', require('./routes/spatialDataRoutes'));
+app.use('/api/spatial-data', require('./routes/spatialDataRoutes')); // HARUS SEBELUM demographic/economic/infrastructure
+app.use('/api/demographic', require('./routes/demographicRoutes'));
+app.use('/api/economic', require('./routes/economicRoutes'));
+app.use('/api/infrastructure', require('./routes/infrastructureRoutes'));
 
 // Health check
 app.get('/', (req, res) => {
