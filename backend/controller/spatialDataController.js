@@ -171,33 +171,41 @@ exports.predictBusinessPotential = async (req, res) => {
       latitude, 
       longitude, 
       category, 
-      // Field Restoran Baru:
-      signatureMenu,
-      menuPrice,
-      menuCategory,
-      parkingAreaSize,
-      isNearCampus,
-      isNearOffice,
-      isNearTouristSpot
+      
+      // Field Restoran
+      signatureMenu, menuPrice, menuCategory, parkingAreaSize, 
+      isNearCampus, isNearOffice, isNearTouristSpot,
+
+      // Field Laundry (BARU)
+      waterCostIndex,
+      housingTypology,
+      sunlightExposure
     } = req.body;
 
-    // 1. SIMPAN DATA RESTORAN (Jika Kategori Restoran)
+    // --- LOGIKA PENYIMPANAN DATA ---
+    
+    // 1. Jika Kategori Restoran
     if (category === 'restoran') {
       await RestoranData.create({
-        latitude,
-        longitude,
-        userId: req.user ? req.user._id : null, // Optional jika ada auth
-        signatureMenu,
-        menuPrice,
-        menuCategory,
-        parkingAreaSize,
+        latitude, longitude, userId: req.user ? req.user._id : null,
+        signatureMenu, menuPrice, menuCategory, parkingAreaSize,
         isNearCampus: Boolean(isNearCampus),
         isNearOffice: Boolean(isNearOffice),
         isNearTouristSpot: Boolean(isNearTouristSpot)
       });
     }
 
-    // 2. LOGIKA PREDIKSI LAMA (Cari Marker Terdekat & Hitung Skor)
+    // 2. Jika Kategori Laundry (BARU)
+    if (category === 'laundry') {
+      await LaundryData.create({
+        latitude, longitude, userId: req.user ? req.user._id : null,
+        waterCostIndex: parseInt(waterCostIndex),
+        housingTypology,
+        sunlightExposure: parseInt(sunlightExposure)
+      });
+    }
+
+    // --- LOGIKA PREDIKSI (Existing) ---
     const markers = await Marker.find({ isActive: true }).lean();
     if (!markers.length) return handleError(res, { message: 'Not Found' }, 'Belum ada marker tersedia', 404);
 
@@ -209,10 +217,7 @@ exports.predictBusinessPotential = async (req, res) => {
         Math.pow(m.latitude - latitude, 2) + 
         Math.pow(m.longitude - longitude, 2)
       );
-      if (dist < minDist) {
-        minDist = dist;
-        nearestMarker = m;
-      }
+      if (dist < minDist) { minDist = dist; nearestMarker = m; }
     });
 
     if (!nearestMarker) return handleError(res, { message: 'Not Found' }, 'Lokasi terlalu jauh', 404);
@@ -230,22 +235,27 @@ exports.predictBusinessPotential = async (req, res) => {
       averageIncome: ecoData?.averageIncome || 0
     };
 
-    // Tambahan logika skor sederhana untuk restoran (opsional, bisa disesuaikan)
     let score = calculatePotentialScore(
-      data.averageAge, 
-      data.averageIncome, 
-      data.populationDensity, 
-      data.roadAccessibility
+      data.averageAge, data.averageIncome, data.populationDensity, data.roadAccessibility
     );
 
-    // Bonus skor jika dekat keramaian (khusus restoran)
+    // --- BONUS SKOR BERDASARKAN INPUT USER ---
     if (category === 'restoran') {
       if (isNearCampus) score += 5;
       if (isNearOffice) score += 5;
       if (isNearTouristSpot) score += 5;
-      score = Math.min(score, 100); // Cap di 100
+    } 
+    else if (category === 'laundry') {
+      // Logic bonus untuk laundry
+      // Air bagus (5) + Area Jemur luas (5) menambah potensi
+      if (waterCostIndex >= 4) score += 5;
+      if (sunlightExposure >= 4) score += 5;
+      
+      // Student & Apartment biasanya butuh laundry
+      if (housingTypology === 'Student_Cluster' || housingTypology === 'Apartment') score += 5;
     }
 
+    score = Math.min(score, 100);
     let categoryLabel = score >= 75 ? 'Sangat Tinggi' : score >= 60 ? 'Tinggi' : score >= 40 ? 'Sedang' : 'Rendah';
 
     sendResponse(res, {

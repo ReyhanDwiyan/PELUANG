@@ -58,13 +58,16 @@ const MapPage = () => {
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState(null);
+  
+  // STATE UTAMA
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    category: 'restoran',
+    category: '', // Default kosong
     address: '',
     rating: 0
   });
+  
   const [popup, setPopup] = useState({ show: false, lat: null, lng: null });
   const [result, setResult] = useState(null);
 
@@ -90,8 +93,21 @@ const MapPage = () => {
     }
   };
 
+  // FUNGSI RESET FORM (Dipanggil saat Buka/Tutup/Simpan)
+  const resetForm = () => {
+    setFormData({
+      title: '',
+      description: '',
+      category: '',
+      address: '',
+      rating: 0
+    });
+  };
+
   const handleMapClick = (latlng) => {
+    resetForm(); // Reset saat klik peta
     setSelectedLocation(latlng);
+    
     if (isAdmin) setShowAddForm(true);
     // Untuk user biasa, hanya tampilkan popup analisis potensi
     if (!isAdmin) setPopup({ show: true, lat: latlng.lat, lng: latlng.lng });
@@ -126,13 +142,7 @@ const MapPage = () => {
       if (response.data.success) {
         alert('Marker berhasil ditambahkan!');
         setShowAddForm(false);
-        setFormData({
-          title: '',
-          description: '',
-          category: 'restoran',
-          address: '',
-          rating: 0
-        });
+        resetForm(); // Reset setelah simpan
         setSelectedLocation(null);
         loadMarkers();
       }
@@ -157,19 +167,10 @@ const MapPage = () => {
     }
   };
 
-  // Handler klik di map
-  function MapClickHandler() {
-    useMapEvents({
-      click(e) {
-        handleMapClick(e.latlng);
-      }
-    });
-    return null;
-  }
-
   const handleClose = () => {
     setPopup({ show: false, lat: null, lng: null });
     setResult(null);
+    resetForm(); // Reset saat user biasa menutup popup
   };
 
   const handleAnalyzeSubmit = async (e) => {
@@ -246,7 +247,6 @@ const MapPage = () => {
 
                 {/* Marker biru saat klik map */}
                 <LocationMarker onAddMarker={handleMapClick} showMarker={true} />
-                <MapClickHandler />
               </MapContainer>
             )}
           </div>
@@ -261,13 +261,14 @@ const MapPage = () => {
                   onClick={() => {
                     setShowAddForm(false);
                     setSelectedLocation(null);
+                    resetForm(); // RESET DITAMBAHKAN DI SINI
                   }}
                 >
                   ✕
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit}>
+              <form onSubmit={handleSubmit} autoComplete="off">
                 <div className="form-group">
                   <label>Lokasi</label>
                   <input
@@ -299,6 +300,7 @@ const MapPage = () => {
                     required
                     className="custom-select"
                   >
+                    <option value="" disabled>-- Pilih Kategori Bisnis --</option>
                     <option value="restoran">Restoran</option>
                     <option value="warung">Warung</option>
                     <option value="laundry">Laundry</option>
@@ -350,6 +352,7 @@ const MapPage = () => {
                     onClick={() => {
                       setShowAddForm(false);
                       setSelectedLocation(null);
+                      resetForm(); // RESET DITAMBAHKAN DI SINI
                     }}
                   >
                     Batal
@@ -364,8 +367,8 @@ const MapPage = () => {
             <div className="popup-card">
               <button className="btn-close" onClick={handleClose}>✕</button>
               <h3>Analisis Potensi Bisnis</h3>
-              <form onSubmit={handleAnalyzeSubmit}>
-                {/* Field Wajib Dasar */}
+              {/* Tambahkan autoComplete="off" */}
+              <form onSubmit={handleAnalyzeSubmit} autoComplete="off">
                 <div className="form-group">
                   <label>Latitude</label>
                   <input type="number" value={popup.lat} disabled />
@@ -374,7 +377,7 @@ const MapPage = () => {
                   <label>Longitude</label>
                   <input type="number" value={popup.lng} disabled />
                 </div>
-                
+
                 <div className="form-group">
                   <label>Kategori Bisnis</label>
                   <select
@@ -384,36 +387,34 @@ const MapPage = () => {
                     required
                     className="custom-select"
                   >
+                    <option value="" disabled>-- Pilih Kategori Bisnis --</option>
                     <option value="restoran">Restoran</option>
                     <option value="warung">Warung</option>
                     <option value="laundry">Laundry</option>
                   </select>
                 </div>
 
-                {/* LOGIKA KONDISIONAL: HANYA MUNCUL JIKA KATEGORI RESTORAN */}
                 {formData.category === 'restoran' && (
                   <div className="extra-fields-section">
-                    <h4>Detail Restoran</h4>
-                    
-                    {/* 1. Menu + Harga (3 Field) */}
+                    <h4 style={{ fontSize: '14px', margin: '0 0 10px 0', color: '#36d6ff' }}>Detail Restoran</h4>
                     <div className="form-group">
                       <label>Menu Andalan</label>
-                      <input 
-                        type="text" 
-                        name="signatureMenu" 
-                        placeholder="Contoh: Nasi Goreng Spesial" 
-                        onChange={handleInputChange} 
-                        required 
+                      <input
+                        type="text"
+                        name="signatureMenu"
+                        placeholder="Contoh: Nasi Goreng Spesial"
+                        onChange={handleInputChange}
+                        required
                       />
                     </div>
                     <div className="form-group">
                       <label>Harga Menu (Rp)</label>
-                      <input 
-                        type="number" 
-                        name="menuPrice" 
-                        placeholder="Contoh: 25000" 
-                        onChange={handleInputChange} 
-                        required 
+                      <input
+                        type="number"
+                        name="menuPrice"
+                        placeholder="Contoh: 25000"
+                        onChange={handleInputChange}
+                        required
                       />
                     </div>
                     <div className="form-group">
@@ -425,51 +426,84 @@ const MapPage = () => {
                         <option value="snack">Cemilan</option>
                       </select>
                     </div>
-
-                    {/* 2. Parkir */}
                     <div className="form-group">
                       <label>Luas Parkir (m²)</label>
-                      <input 
-                        type="number" 
-                        name="parkingAreaSize" 
-                        placeholder="Contoh: 50" 
-                        onChange={handleInputChange} 
-                        required 
+                      <input
+                        type="number"
+                        name="parkingAreaSize"
+                        placeholder="Contoh: 50"
+                        onChange={handleInputChange}
+                        required
                       />
                     </div>
-
-                    {/* 3. Checkbox Kedekatan */}
                     <div className="form-group">
                       <label style={{ marginBottom: '8px', display: 'block' }}>Lokasi Strategis:</label>
                       <div className="checkbox-group" style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ display: 'flex', alignItems: 'center', fontWeight: 'normal' }}>
-                          <input 
-                            type="checkbox" 
-                            name="isNearCampus" 
-                            checked={formData.isNearCampus || false} 
-                            onChange={handleInputChange} 
+                          <input
+                            type="checkbox"
+                            name="isNearCampus"
+                            checked={formData.isNearCampus || false}
+                            onChange={handleInputChange}
                             style={{ marginRight: '8px' }}
                           /> Dekat Kampus
                         </label>
                         <label style={{ display: 'flex', alignItems: 'center', fontWeight: 'normal' }}>
-                          <input 
-                            type="checkbox" 
-                            name="isNearOffice" 
-                            checked={formData.isNearOffice || false} 
-                            onChange={handleInputChange} 
+                          <input
+                            type="checkbox"
+                            name="isNearOffice"
+                            checked={formData.isNearOffice || false}
+                            onChange={handleInputChange}
                             style={{ marginRight: '8px' }}
                           /> Dekat Kantor
                         </label>
                         <label style={{ display: 'flex', alignItems: 'center', fontWeight: 'normal' }}>
-                          <input 
-                            type="checkbox" 
-                            name="isNearTouristSpot" 
-                            checked={formData.isNearTouristSpot || false} 
-                            onChange={handleInputChange} 
+                          <input
+                            type="checkbox"
+                            name="isNearTouristSpot"
+                            checked={formData.isNearTouristSpot || false}
+                            onChange={handleInputChange}
                             style={{ marginRight: '8px' }}
                           /> Dekat Wisata
                         </label>
                       </div>
+                    </div>
+                  </div>
+                )}
+
+                {formData.category === 'laundry' && (
+                  <div className="extra-fields-section">
+                    <h4 style={{ fontSize: '14px', margin: '0 0 10px 0', color: '#36d6ff' }}>Detail Laundry</h4>
+                    <div className="form-group">
+                      <label>Kualitas & Biaya Air (1-5)</label>
+                      <select name="waterCostIndex" onChange={handleInputChange} required className="custom-select">
+                        <option value="">-- Pilih Skala --</option>
+                        <option value="1">1 - Air Kuning / Beli Tangki (Mahal)</option>
+                        <option value="2">2 - Kurang Bagus</option>
+                        <option value="3">3 - Standar</option>
+                        <option value="4">4 - Bagus</option>
+                        <option value="5">5 - Air Tanah Bagus & Gratis</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>Tipe Hunian Dominan</label>
+                      <select name="housingTypology" onChange={handleInputChange} required className="custom-select">
+                        <option value="">-- Pilih Tipe --</option>
+                        <option value="Student_Cluster">Student Cluster (Kos-kosan)</option>
+                        <option value="Family_Cluster">Family Cluster (Perumahan)</option>
+                        <option value="Apartment">Apartment</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>Ketersediaan Area Jemur (1-5)</label>
+                      <select name="sunlightExposure" onChange={handleInputChange} required className="custom-select">
+                        <option value="">-- Pilih Skala --</option>
+                        <option value="1">1 - Terhalang / Indoor Sempit</option>
+                        <option value="2">2 - Minim Cahaya</option>
+                        <option value="3">3 - Cukup</option>
+                        <option value="4">4 - Terbuka Sebagian</option>
+                        <option value="5">5 - Terbuka Penuh (Outdoor Luas)</option>
+                      </select>
                     </div>
                   </div>
                 )}
