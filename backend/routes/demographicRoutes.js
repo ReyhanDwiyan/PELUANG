@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { protect, isAdmin } = require('../middleware/authMiddleware');
+// PERBAIKAN: Import 'authorize'
+const { protect, authorize } = require('../middleware/authMiddleware');
 const {
     createDemographicData,
     getAllDemographicData,
@@ -9,10 +10,11 @@ const {
     deleteDemographicData
 } = require('../controller/demographicController');
 
-router.post('/', protect, isAdmin, createDemographicData);
+// PERBAIKAN: Ganti isAdmin dengan authorize('admin')
+router.post('/', protect, authorize('admin'), createDemographicData);
 router.get('/', protect, getAllDemographicData);
 router.get('/marker/:markerId', protect, getDemographicDataByMarkerId);
-router.put('/:id', protect, isAdmin, updateDemographicData);
-router.delete('/:id', protect, isAdmin, deleteDemographicData);
+router.put('/:id', protect, authorize('admin'), updateDemographicData);
+router.delete('/:id', protect, authorize('admin'), deleteDemographicData);
 
 module.exports = router;

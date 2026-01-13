@@ -1,20 +1,23 @@
 const express = require('express');
 const router = express.Router();
 const markerController = require('../controller/markerController');
-const { protect, isAdmin } = require('../middleware/authMiddleware'); // <-- Impor middleware
+// PERUBAHAN 1: Import 'authorize' bukan 'isAdmin'
+const { protect, authorize } = require('../middleware/authMiddleware'); 
 
 // Special routes (harus di atas :id routes)
-router.get('/stats', protect, markerController.getMarkerStats);       // <-- PROTECT
-router.get('/nearby', protect, markerController.getNearbyMarkers);     // <-- PROTECT
+router.get('/stats', protect, markerController.getMarkerStats);
+router.get('/nearby', protect, markerController.getNearbyMarkers);
 
 // CRUD routes
 router.route('/')
-  .get(protect, markerController.getAllMarkers)     // GET /api/markers <-- PROTECT
-  .post(protect, isAdmin, markerController.createMarker); // POST /api/markers <-- PROTECT & ISADMIN
+  .get(protect, markerController.getAllMarkers)
+  // PERUBAHAN 2: Ganti 'isAdmin' dengan "authorize('admin')"
+  .post(protect, authorize('admin'), markerController.createMarker); 
 
 router.route('/:id')
-  .get(protect, markerController.getMarkerById)      // GET /api/markers/:id <-- PROTECT
-  .put(protect, isAdmin, markerController.updateMarker)   // PUT /api/markers/:id <-- PROTECT & ISADMIN
-  .delete(protect, isAdmin, markerController.deleteMarker); // DELETE /api/markers/:id <-- PROTECT & ISADMIN
+  .get(protect, markerController.getMarkerById)
+  // PERUBAHAN 3: Ganti 'isAdmin' dengan "authorize('admin')"
+  .put(protect, authorize('admin'), markerController.updateMarker)
+  .delete(protect, authorize('admin'), markerController.deleteMarker);
 
 module.exports = router;

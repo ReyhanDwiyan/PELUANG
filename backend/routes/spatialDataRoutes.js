@@ -1,31 +1,26 @@
 const express = require('express');
 const router = express.Router();
-const spatialDataController = require('../controller/spatialDataController');
-const { protect, isAdmin } = require('../middleware/authMiddleware'); // <-- Impor protect
+const { 
+  createPopulationData, 
+  createRoadAccessibilityData, 
+  getAllCombinedData,
+  predictBusinessPotential 
+} = require('../controller/spatialDataController');
+const { protect, authorize } = require('../middleware/authMiddleware');
 
-const multer = require('multer');
-const upload = multer({ dest: 'uploads/' });
+// Route untuk input data terpisah
+// POST /api/spatial-data/population
+router.post('/population', protect, authorize('admin'), createPopulationData);
 
-// Public routes (Sekarang Terproteksi)
-router.get('/combined', protect, spatialDataController.getAllCombinedData);
-router.get('/combined/marker/:markerId', protect, spatialDataController.getCombinedDataByMarkerId);
-router.get('/', protect, spatialDataController.getAllSpatialData);           // <-- PROTECT
-router.get('/marker/:markerId', protect, spatialDataController.getSpatialDataByMarker); // <-- PROTECT
-router.get('/statistics', protect, spatialDataController.getStatistics);   // <-- PROTECT
+// POST /api/spatial-data/road-accessibility
+router.post('/road-accessibility', protect, authorize('admin'), createRoadAccessibilityData);
 
+// Route Gabungan (untuk Map/Dashboard)
+// GET /api/spatial-data
+router.get('/', protect, getAllCombinedData);
 
-// Admin only routes
-// Catatan: Middleware 'protect' harus selalu mendahului 'isAdmin'
-router.post('/', protect, isAdmin, spatialDataController.createSpatialData);
-router.put('/:id', spatialDataController.updateSpatialData);
-router.delete('/:id', spatialDataController.deleteSpatialData);
-// router.post(
-//     '/upload',
-//     protect, // jika perlu autentikasi
-//     isAdmin, // jika hanya admin
-//     upload.single('file'),
-//     spatialDataController.uploadSpatialData
-// ); // Endpoint upload CSV/XLSX (admin only)
-router.post('/predict', spatialDataController.predictBusinessPotential);
+// Route Prediksi
+// POST /api/spatial-data/predict
+router.post('/predict', protect, predictBusinessPotential);
 
 module.exports = router;

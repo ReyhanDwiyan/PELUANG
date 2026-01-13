@@ -1,14 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('../controller/userController');
-const { protect, isAdmin } = require('../middleware/authMiddleware'); // <-- Impor middleware
+// PERBAIKAN 1: Import 'authorize' (bukan isAdmin)
+const { protect, authorize } = require('../middleware/authMiddleware'); 
 
 router.route('/')
-  .get(protect, isAdmin, userController.getAllUsers); // GET /api/users <-- PROTECT & ISADMIN
+  // PERBAIKAN 2: Ganti isAdmin dengan authorize('admin')
+  .get(protect, authorize('admin'), userController.getAllUsers); 
 
 router.route('/:id')
-  .get(protect, isAdmin, userController.getUserById)    // GET /api/users/:id <-- PROTECT & ISADMIN
-  .put(protect, isAdmin, userController.updateUser)     // PUT /api/users/:id <-- PROTECT & ISADMIN
-  .delete(protect, isAdmin, userController.deleteUser);  // DELETE /api/users/:id <-- PROTECT & ISADMIN
+  .get(protect, authorize('admin'), userController.getUserById)
+  .put(protect, authorize('admin'), userController.updateUser)
+  .delete(protect, authorize('admin'), userController.deleteUser);
 
 module.exports = router;

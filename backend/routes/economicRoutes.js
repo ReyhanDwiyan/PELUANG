@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { protect, isAdmin } = require('../middleware/authMiddleware');
+// PERBAIKAN: Import 'authorize'
+const { protect, authorize } = require('../middleware/authMiddleware');
 const {
     createEconomicData,
     getAllEconomicData,
@@ -9,10 +10,11 @@ const {
     deleteEconomicData
 } = require('../controller/economicController');
 
-router.post('/', protect, isAdmin, createEconomicData);
+// PERBAIKAN: Ganti isAdmin dengan authorize('admin')
+router.post('/', protect, authorize('admin'), createEconomicData);
 router.get('/', protect, getAllEconomicData);
 router.get('/marker/:markerId', protect, getEconomicDataByMarkerId);
-router.put('/:id', protect, isAdmin, updateEconomicData);
-router.delete('/:id', protect, isAdmin, deleteEconomicData);
+router.put('/:id', protect, authorize('admin'), updateEconomicData);
+router.delete('/:id', protect, authorize('admin'), deleteEconomicData);
 
 module.exports = router;
