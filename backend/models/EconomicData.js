@@ -12,6 +12,15 @@ const economicDataSchema = new mongoose.Schema({
     required: true,
     min: 0
   },
+  // --- DATA BARU: BIAYA SEWA ---
+  averageRentalCost: {
+    type: Number,
+    required: [true, 'Biaya sewa rata-rata wajib diisi'], // Input Admin: Rupiah per tahun
+    min: 0,
+    default: 0
+  },
+  // -----------------------------
+  
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',

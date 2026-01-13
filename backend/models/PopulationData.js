@@ -10,11 +10,31 @@ const PopulationDataSchema = new mongoose.Schema({
     type: Number,
     required: [true, 'Kepadatan penduduk wajib diisi']
   },
-  // Saya tambahkan averageAge disini karena erat kaitannya dengan populasi
   averageAge: {
     type: Number,
     required: [true, 'Rata-rata umur wajib diisi']
   },
+  // --- DATA BARU: TARGET PASAR (Persentase 0-100) ---
+  studentPercentage: { 
+    type: Number, 
+    default: 0,
+    min: 0,
+    max: 100 
+  },
+  workerPercentage: { 
+    type: Number, 
+    default: 0,
+    min: 0,
+    max: 100 
+  },
+  familyPercentage: { 
+    type: Number, 
+    default: 0,
+    min: 0,
+    max: 100 
+  },
+  // --------------------------------------------------
+  
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
