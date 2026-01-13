@@ -81,8 +81,10 @@ export const spatialDataAPI = {
   create: (data) => api.post('/spatial-data', data),
   update: (id, data) => api.put(`/spatial-data/${id}`, data),
   delete: (id) => api.delete(`/spatial-data/${id}`),
+  getHistory: () => api.get('/spatial-data/history'),
   getStatistics: () => api.get('/spatial-data/statistics'),
   predict: (data) => api.post('/spatial-data/predict', data),
+  getUserStats: () => api.get('/spatial-data/stats'),     // Untuk Dashboard Angka
 };
 
 export const demographicAPI = {

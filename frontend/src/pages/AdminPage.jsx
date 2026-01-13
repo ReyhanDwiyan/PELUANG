@@ -1,5 +1,3 @@
-/* AdminPage.jsx */
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { requireAdmin } from '../utils/auth';
@@ -14,13 +12,20 @@ const AdminPage = () => {
     const [loading, setLoading] = useState(true);
     const [showAddForm, setShowAddForm] = useState(false);
     const [editingData, setEditingData] = useState(null);
+    
+    // STATE FORM DATA (Disesuaikan dengan Backend Baru)
     const [formData, setFormData] = useState({
         markerId: '',
         averageAge: '',
-        averageIncome: '',
         populationDensity: '',
+        studentPercentage: '0',
+        workerPercentage: '0',
+        familyPercentage: '0',
+        averageIncome: '',
+        averageRentalCost: '',
         roadAccessibility: '3'
     });
+    
     const [breakdownData, setBreakdownData] = useState(null);
 
     useEffect(() => {
@@ -35,13 +40,8 @@ const AdminPage = () => {
                 spatialDataAPI.getAll()
             ]);
 
-            if (markersRes.data.success) {
-                setMarkers(markersRes.data.data);
-            }
-
-            if (spatialRes.data.success) {
-                setSpatialData(spatialRes.data.data);
-            }
+            if (markersRes.data.success) setMarkers(markersRes.data.data);
+            if (spatialRes.data.success) setSpatialData(spatialRes.data.data);
         } catch (error) {
             console.error('Error loading data:', error);
             alert('Gagal memuat data');
@@ -52,21 +52,28 @@ const AdminPage = () => {
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
-        setFormData({
-            ...formData,
-            [name]: value
-        });
+        setFormData({ ...formData, [name]: value });
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
         try {
+            // Validasi Total Persentase (Optional tapi bagus)
+            const totalPct = parseFloat(formData.studentPercentage) + parseFloat(formData.workerPercentage) + parseFloat(formData.familyPercentage);
+            if (totalPct > 100) {
+                alert("Total persentase demografi tidak boleh lebih dari 100%");
+                return;
+            }
+
             const data = {
                 markerId: formData.markerId,
                 averageAge: parseFloat(formData.averageAge),
-                averageIncome: parseFloat(formData.averageIncome),
                 populationDensity: parseFloat(formData.populationDensity),
+                studentPercentage: parseFloat(formData.studentPercentage),
+                workerPercentage: parseFloat(formData.workerPercentage),
+                familyPercentage: parseFloat(formData.familyPercentage),
+                averageIncome: parseFloat(formData.averageIncome),
+                averageRentalCost: parseFloat(formData.averageRentalCost),
                 roadAccessibility: parseInt(formData.roadAccessibility)
             };
 
@@ -79,15 +86,7 @@ const AdminPage = () => {
 
             if (response.data.success) {
                 alert(editingData ? 'Data berhasil diupdate!' : 'Data berhasil ditambahkan!');
-                setShowAddForm(false);
-                setEditingData(null);
-                setFormData({
-                    markerId: '',
-                    averageAge: '',
-                    averageIncome: '',
-                    populationDensity: '',
-                    roadAccessibility: '3'
-                });
+                handleCancel(); // Reset form
                 loadData();
             }
         } catch (error) {
@@ -99,10 +98,14 @@ const AdminPage = () => {
     const handleEdit = (data) => {
         setEditingData(data);
         setFormData({
-            markerId: data.markerId._id,
+            markerId: data.markerId?._id || '',
             averageAge: data.averageAge.toString(),
-            averageIncome: data.averageIncome.toString(),
             populationDensity: data.populationDensity.toString(),
+            studentPercentage: (data.studentPercentage || 0).toString(),
+            workerPercentage: (data.workerPercentage || 0).toString(),
+            familyPercentage: (data.familyPercentage || 0).toString(),
+            averageIncome: data.averageIncome.toString(),
+            averageRentalCost: (data.averageRentalCost || 0).toString(),
             roadAccessibility: data.roadAccessibility.toString()
         });
         setShowAddForm(true);
@@ -110,7 +113,6 @@ const AdminPage = () => {
 
     const handleDelete = async (id) => {
         if (!window.confirm('Hapus data spasial ini?')) return;
-
         try {
             const response = await spatialDataAPI.delete(id);
             if (response.data.success) {
@@ -129,8 +131,12 @@ const AdminPage = () => {
         setFormData({
             markerId: '',
             averageAge: '',
-            averageIncome: '',
             populationDensity: '',
+            studentPercentage: '0',
+            workerPercentage: '0',
+            familyPercentage: '0',
+            averageIncome: '',
+            averageRentalCost: '',
             roadAccessibility: '3'
         });
     };
@@ -139,258 +145,158 @@ const AdminPage = () => {
         const usedMarkerIds = spatialData
             .map(sd => sd.markerId && sd.markerId._id)
             .filter(Boolean);
-        // Filter hanya marker yang valid dan bukan null
         return markers
             .filter(m => m && (!usedMarkerIds.includes(m._id) || (editingData && m._id === formData.markerId)));
     };
 
-    const getPotentialCategory = (score) => {
-        if (score >= 75) return { label: 'Sangat Tinggi', color: '#10b981' };
-        if (score >= 60) return { label: 'Tinggi', color: '#3b82f6' };
-        if (score >= 40) return { label: 'Sedang', color: '#f59e0b' };
-        return { label: 'Rendah', color: '#ef4444' };
-    };
-
     const formatCurrency = (value) => {
-        return new Intl.NumberFormat('id-ID', {
-            style: 'currency',
-            currency: 'IDR',
-            minimumFractionDigits: 0
-        }).format(value);
+        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(value);
     };
 
-    if (loading) {
-        return (
-            <div className="dashboard-container">
-                <div className="loading">Loading...</div>
-            </div>
-        );
-    }
+    if (loading) return <div className="dashboard-container"><div className="loading">Loading...</div></div>;
 
     return (
         <div className="page-wrapper">
             <div className="page-container">
                 <header className="page-header">
                     <h1 className="page-title">Admin Panel</h1>
-                    <p className="page-subtitle">Kelola data marker dan spatial</p>
+                    <p className="page-subtitle">Kelola Data Spasial & Demografi Wilayah</p>
                 </header>
 
                 <div className="admin-actions">
-                    <button
-                        className="btn btn-primary"
-                        onClick={() => setShowAddForm(true)}
-                        disabled={showAddForm}
-                    >
-                        Tambah Data Spasial
+                    <button className="btn btn-primary" onClick={() => setShowAddForm(true)} disabled={showAddForm}>
+                        Tambah Data Wilayah
                     </button>
                 </div>
 
-                {/* Form Add/Edit */}
                 {showAddForm && (
                     <div className="admin-form-card">
                         <div className="form-header">
-                            <h3>{editingData ? '✏️ Edit Data Spasial' : '➕ Tambah Data Spasial Baru'}</h3>
+                            <h3>{editingData ? '✏️ Edit Data' : '➕ Tambah Data Wilayah'}</h3>
                             <button className="btn-close" onClick={handleCancel}>✕</button>
                         </div>
 
                         <form onSubmit={handleSubmit}>
                             <div className="form-grid">
-                                <div className="form-group">
-                                    <label>Pilih Lokasi/Marker *</label>
-                                    <select
-                                        name="markerId"
-                                        value={formData.markerId}
-                                        onChange={handleInputChange}
-                                        required
-                                        disabled={editingData !== null}
-                                    >
+                                {/* PILIH MARKER */}
+                                <div className="form-group full-width">
+                                    <label>Pilih Lokasi Marker *</label>
+                                    <select name="markerId" value={formData.markerId} onChange={handleInputChange} required disabled={editingData !== null}>
                                         <option value="">-- Pilih Marker --</option>
                                         {getAvailableMarkers().map(marker => (
-                                            marker && marker.title ? (
-                                                <option key={marker._id} value={marker._id}>
-                                                    {marker.title} ({marker.category})
-                                                </option>
-                                            ) : null
+                                            <option key={marker._id} value={marker._id}>{marker.title}</option>
                                         ))}
                                     </select>
-                                    {editingData && (
-                                        <small className="form-hint">Marker tidak dapat diubah saat edit</small>
-                                    )}
                                 </div>
 
+                                {/* SECTION 1: DEMOGRAFI DASAR */}
+                                <div className="form-section-label">1. Demografi Dasar</div>
                                 <div className="form-group">
-                                    <label>Rata-rata Umur Penduduk *</label>
-                                    <input
-                                        type="number"
-                                        name="averageAge"
-                                        value={formData.averageAge}
-                                        onChange={handleInputChange}
-                                        min="0"
-                                        max="100"
-                                        step="0.1"
-                                        placeholder="Contoh: 35.5"
-                                        required
-                                    />
-                                    <small className="form-hint">Dalam tahun (0-100)</small>
+                                    <label>Kepadatan (Jiwa/km²)</label>
+                                    <input type="number" name="populationDensity" value={formData.populationDensity} onChange={handleInputChange} required placeholder="Contoh: 5000" />
+                                </div>
+                                <div className="form-group">
+                                    <label>Rata-rata Umur</label>
+                                    <input type="number" name="averageAge" value={formData.averageAge} onChange={handleInputChange} required placeholder="Contoh: 30" step="0.1" />
                                 </div>
 
+                                {/* SECTION 2: TARGET PASAR (BARU) */}
+                                <div className="form-section-label">2. Target Pasar (Total Max 100%)</div>
                                 <div className="form-group">
-                                    <label>Rata-rata Penghasilan *</label>
-                                    <input
-                                        type="number"
-                                        name="averageIncome"
-                                        value={formData.averageIncome}
-                                        onChange={handleInputChange}
-                                        min="0"
-                                        step="100000"
-                                        placeholder="Contoh: 5000000"
-                                        required
-                                    />
-                                    <small className="form-hint">Dalam Rupiah per bulan</small>
+                                    <label>% Mahasiswa</label>
+                                    <input type="number" name="studentPercentage" value={formData.studentPercentage} onChange={handleInputChange} min="0" max="100" />
+                                </div>
+                                <div className="form-group">
+                                    <label>% Karyawan</label>
+                                    <input type="number" name="workerPercentage" value={formData.workerPercentage} onChange={handleInputChange} min="0" max="100" />
+                                </div>
+                                <div className="form-group">
+                                    <label>% Keluarga</label>
+                                    <input type="number" name="familyPercentage" value={formData.familyPercentage} onChange={handleInputChange} min="0" max="100" />
                                 </div>
 
+                                {/* SECTION 3: EKONOMI & AKSES */}
+                                <div className="form-section-label">3. Ekonomi & Infrastruktur</div>
                                 <div className="form-group">
-                                    <label>Kepadatan Penduduk *</label>
-                                    <input
-                                        type="number"
-                                        name="populationDensity"
-                                        value={formData.populationDensity}
-                                        onChange={handleInputChange}
-                                        min="0"
-                                        step="100"
-                                        placeholder="Contoh: 5000"
-                                        required
-                                    />
-                                    <small className="form-hint">Jiwa per km²</small>
+                                    <label>Pendapatan Rata-rata (Bulan)</label>
+                                    <input type="number" name="averageIncome" value={formData.averageIncome} onChange={handleInputChange} required placeholder="Rp 4.500.000" step="50000" />
                                 </div>
-
                                 <div className="form-group">
-                                    <label>Aksesibilitas Jalan Raya *</label>
-                                    <select
-                                        name="roadAccessibility"
-                                        value={formData.roadAccessibility}
-                                        onChange={handleInputChange}
-                                        required
-                                    >
-                                        <option value="1">1 - Sangat Sulit</option>
+                                    <label>Biaya Sewa Lahan (Tahun)</label>
+                                    <input type="number" name="averageRentalCost" value={formData.averageRentalCost} onChange={handleInputChange} required placeholder="Rp 25.000.000" step="100000" />
+                                </div>
+                                <div className="form-group">
+                                    <label>Akses Jalan (1-5)</label>
+                                    <select name="roadAccessibility" value={formData.roadAccessibility} onChange={handleInputChange} required>
+                                        <option value="1">1 - Sangat Sulit (Gang)</option>
                                         <option value="2">2 - Sulit</option>
                                         <option value="3">3 - Sedang</option>
                                         <option value="4">4 - Mudah</option>
-                                        <option value="5">5 - Sangat Mudah</option>
+                                        <option value="5">5 - Sangat Mudah (Jalan Raya)</option>
                                     </select>
-                                    <small className="form-hint">Tingkat kemudahan akses ke jalan utama</small>
                                 </div>
                             </div>
 
                             <div className="form-actions">
-                                <button type="submit" className="btn btn-primary">
-                                    {editingData ? '💾 Update Data' : '➕ Simpan Data'}
-                                </button>
-                                <button type="button" className="btn btn-secondary" onClick={handleCancel}>
-                                    ❌ Batal
-                                </button>
+                                <button type="submit" className="btn btn-primary">{editingData ? 'Simpan Perubahan' : 'Simpan Data Baru'}</button>
+                                <button type="button" className="btn btn-secondary" onClick={handleCancel}>Batal</button>
                             </div>
                         </form>
                     </div>
                 )}
 
-                {/* Data Table */}
+                {/* TABLE DATA */}
                 <div className="admin-table-card">
-                    <h3>📊 Data Spasial & Skor Potensi ({spatialData.length})</h3>
-
-                    {spatialData.length === 0 ? (
-                        <p className="empty-message">Belum ada data spasial. Tambahkan data pertama!</p>
-                    ) : (
+                    <h3>📊 Data Wilayah Terdaftar ({spatialData.length})</h3>
+                    {spatialData.length === 0 ? <p className="empty-message">Belum ada data.</p> : (
                         <div className="table-responsive">
                             <table className="admin-table">
                                 <thead>
                                     <tr>
                                         <th>Lokasi</th>
-                                        <th>Kategori</th>
-                                        <th>Rata-rata Umur</th>
-                                        <th>Rata-rata Penghasilan</th>
-                                        <th>Kepadatan Penduduk</th>
-                                        <th>Akses Jalan</th>
-                                        <th>Skor Potensi</th>
+                                        <th>Kepadatan</th>
+                                        <th>Target Pasar</th>
+                                        <th>Ekonomi (Income/Sewa)</th>
+                                        <th>Akses</th>
                                         <th>Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {spatialData.map((data) => {
-                                        const potential = getPotentialCategory(data.potentialScore);
-                                        return (
-                                            <tr key={data._id}>
-                                                <td>
-                                                    <strong>{data.markerId.title}</strong>
-                                                    <br />
-                                                    <small>{data.markerId.address || 'No address'}</small>
-                                                </td>
-                                                <td>
-                                                    <span className="category-badge">
-                                                        {data.markerId.category}
-                                                    </span>
-                                                </td>
-                                                <td>{data.averageAge} tahun</td>
-                                                <td>{formatCurrency(data.averageIncome)}</td>
-                                                <td>{data.populationDensity.toLocaleString()} jiwa/km²</td>
-                                                <td>
-                                                    <div className="access-rating">
-                                                        {'⭐'.repeat(data.roadAccessibility)}
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <span
-                                                        className="potential-badge"
-                                                        style={{ backgroundColor: potential.color }}
-                                                    >
-                                                        {data.potentialScore} - {potential.label}
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    <div className="action-buttons">
-                                                        <button
-                                                            className="btn-edit"
-                                                            onClick={() => handleEdit(data)}
-                                                            title="Edit"
-                                                        >✏️</button>
-                                                        <button
-                                                            className="btn-delete"
-                                                            onClick={() => handleDelete(data._id)}
-                                                            title="Hapus"
-                                                        >🗑️</button>
-                                                        <button
-                                                            className="btn-secondary"
-                                                            onClick={() => setBreakdownData(data)}
-                                                            title="Detail Skor"
-                                                        >🔍</button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
+                                    {spatialData.map((data) => (
+                                        <tr key={data._id}>
+                                            <td>
+                                                <strong>{data.markerId?.title || 'Unknown'}</strong><br/>
+                                                <small>{data.markerId?.category}</small>
+                                            </td>
+                                            <td>{data.populationDensity.toLocaleString()} jiwa/km²<br/><small>Umur: {data.averageAge} thn</small></td>
+                                            <td>
+                                                <small>
+                                                    🎓 Mhs: {data.studentPercentage}%<br/>
+                                                    💼 Krj: {data.workerPercentage}%<br/>
+                                                    🏠 Kel: {data.familyPercentage}%
+                                                </small>
+                                            </td>
+                                            <td>
+                                                <span style={{color: 'green'}}>{formatCurrency(data.averageIncome)}</span><br/>
+                                                <small style={{color: 'red'}}>Sewa: {formatCurrency(data.averageRentalCost)}/thn</small>
+                                            </td>
+                                            <td>{'⭐'.repeat(data.roadAccessibility)}</td>
+                                            <td>
+                                                <div className="action-buttons">
+                                                    <button className="btn-edit" onClick={() => handleEdit(data)}>✏️</button>
+                                                    <button className="btn-delete" onClick={() => handleDelete(data._id)}>🗑️</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
                                 </tbody>
                             </table>
                         </div>
                     )}
                 </div>
-
-                {/* Breakdown Popup */}
-                {breakdownData && (
-                    <div className="popup-card">
-                        <button className="btn-close" onClick={() => setBreakdownData(null)}>✕</button>
-                        <h3>Breakdown Skor Potensi</h3>
-                        <ul>
-                            <li>Umur: {((100 - breakdownData.averageAge) / 100 * 25).toFixed(2)} / 25</li>
-                            <li>Penghasilan: {(Math.min(breakdownData.averageIncome / 10000000, 1) * 25).toFixed(2)} / 25</li>
-                            <li>Kepadatan: {(Math.min(breakdownData.populationDensity / 10000, 1) * 25).toFixed(2)} / 25</li>
-                            <li>Akses Jalan: {((breakdownData.roadAccessibility / 5) * 25).toFixed(2)} / 25</li>
-                            <li><strong>Total: {breakdownData.potentialScore} / 100</strong></li>
-                        </ul>
-                    </div>
-                )}
             </div>
         </div>
     );
 };
 
-export default AdminPage
+export default AdminPage;

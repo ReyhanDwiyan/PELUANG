@@ -367,12 +367,38 @@ exports.predictBusinessPotential = async (req, res) => {
 // ==========================================
 // 6. LEGACY ROUTES (Agar tidak error 404)
 // ==========================================
-exports.createPopulationData = async (req, res) => {
-  // Fungsi dummy/wrapper agar route tidak error
-  exports.createSpatialData(req, res);
+exports.getUserStats = async (req, res) => {
+  try {
+    const history = await AnalysisHistory.find({ userId: req.user._id });
+    
+    const total = history.length;
+    let avgScore = 0;
+
+    if (total > 0) {
+      const sum = history.reduce((acc, curr) => acc + curr.finalScore, 0);
+      avgScore = sum / total;
+    }
+
+    sendResponse(res, {
+      totalAnalysis: total,
+      averagePotential: parseFloat(avgScore.toFixed(1)) // Ambil 1 desimal
+    });
+  } catch (error) {
+    handleError(res, error, 'Gagal mengambil statistik dashboard');
+  }
 };
 
-exports.createRoadAccessibilityData = async (req, res) => {
-  // Fungsi dummy/wrapper agar route tidak error
-  exports.createSpatialData(req, res);
+// ==========================================
+// 7. GET USER HISTORY (Riwayat Analisis User)
+// ==========================================
+exports.getUserHistory = async (req, res) => {
+  try {
+    const history = await AnalysisHistory.find({ userId: req.user._id })
+      .populate('markerId', 'title address')
+      .sort({ analyzedAt: -1 }); // Terbaru diatas
+
+    sendResponse(res, history);
+  } catch (error) {
+    handleError(res, error, 'Gagal mengambil riwayat');
+  }
 };
