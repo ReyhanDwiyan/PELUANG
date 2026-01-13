@@ -1,93 +1,91 @@
 const InfrastructureData = require('../models/InfrastructureData');
 const Marker = require('../models/Marker');
 
+// --- HELPER FUNCTIONS ---
+
+const handleError = (res, error, message, status = 500) => {
+  res.status(status).json({
+    success: false,
+    message,
+    error: error.message
+  });
+};
+
+const sendResponse = (res, data, status = 200, message = null) => {
+  const response = { success: true };
+  if (message) response.message = message;
+  if (data !== undefined) response.data = data;
+  
+  res.status(status).json(response);
+};
+
+// --- CONTROLLERS ---
+
+// CREATE
 exports.createInfrastructureData = async (req, res) => {
   try {
     const { markerId, roadAccessibility } = req.body;
 
+    // 1. Validasi Marker
     const marker = await Marker.findById(markerId);
     if (!marker) {
-      return res.status(404).json({
-        success: false,
-        message: 'Marker tidak ditemukan'
-      });
+      return handleError(res, { message: 'Not Found' }, 'Marker tidak ditemukan', 404);
     }
 
+    // 2. Validasi Duplikat
     const existingData = await InfrastructureData.findOne({ markerId });
     if (existingData) {
-      return res.status(400).json({
-        success: false,
-        message: 'Data infrastruktur untuk marker ini sudah ada'
-      });
+      return handleError(res, { message: 'Duplicate' }, 'Data infrastruktur untuk marker ini sudah ada', 400);
     }
 
-    const infrastructureData = await InfrastructureData.create({
+    // 3. Create & Populate
+    const newItem = await InfrastructureData.create({
       markerId,
       roadAccessibility,
       createdBy: req.user.userId
     });
 
-    const populatedData = await InfrastructureData.findById(infrastructureData._id)
-      .populate('markerId');
+    const populatedData = await InfrastructureData.findById(newItem._id).populate('markerId');
 
-    res.status(201).json({
-      success: true,
-      message: 'Data infrastruktur berhasil ditambahkan',
-      data: populatedData
-    });
+    sendResponse(res, populatedData, 201, 'Data infrastruktur berhasil ditambahkan');
+
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Gagal menambahkan data infrastruktur',
-      error: error.message
-    });
+    handleError(res, error, 'Gagal menambahkan data infrastruktur');
   }
 };
 
+// GET ALL
 exports.getAllInfrastructureData = async (req, res) => {
   try {
     const data = await InfrastructureData.find()
       .populate('markerId')
       .sort({ createdAt: -1 });
 
-    res.json({
-      success: true,
-      data
-    });
+    sendResponse(res, data);
+
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Gagal mengambil data infrastruktur',
-      error: error.message
-    });
+    handleError(res, error, 'Gagal mengambil data infrastruktur');
   }
 };
 
+// GET BY MARKER ID
 exports.getInfrastructureDataByMarkerId = async (req, res) => {
   try {
     const data = await InfrastructureData.findOne({ markerId: req.params.markerId })
       .populate('markerId');
 
     if (!data) {
-      return res.status(404).json({
-        success: false,
-        message: 'Data infrastruktur tidak ditemukan'
-      });
+      return handleError(res, { message: 'Not Found' }, 'Data infrastruktur tidak ditemukan', 404);
     }
 
-    res.json({
-      success: true,
-      data
-    });
+    sendResponse(res, data);
+
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Gagal mengambil data infrastruktur',
-      error: error.message
-    });
+    handleError(res, error, 'Gagal mengambil data infrastruktur');
   }
 };
 
+// UPDATE
 exports.updateInfrastructureData = async (req, res) => {
   try {
     const { roadAccessibility } = req.body;
@@ -99,46 +97,28 @@ exports.updateInfrastructureData = async (req, res) => {
     ).populate('markerId');
 
     if (!data) {
-      return res.status(404).json({
-        success: false,
-        message: 'Data infrastruktur tidak ditemukan'
-      });
+      return handleError(res, { message: 'Not Found' }, 'Data infrastruktur tidak ditemukan', 404);
     }
 
-    res.json({
-      success: true,
-      message: 'Data infrastruktur berhasil diupdate',
-      data
-    });
+    sendResponse(res, data, 200, 'Data infrastruktur berhasil diupdate');
+
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Gagal mengupdate data infrastruktur',
-      error: error.message
-    });
+    handleError(res, error, 'Gagal mengupdate data infrastruktur');
   }
 };
 
+// DELETE
 exports.deleteInfrastructureData = async (req, res) => {
   try {
     const data = await InfrastructureData.findByIdAndDelete(req.params.id);
 
     if (!data) {
-      return res.status(404).json({
-        success: false,
-        message: 'Data infrastruktur tidak ditemukan'
-      });
+      return handleError(res, { message: 'Not Found' }, 'Data infrastruktur tidak ditemukan', 404);
     }
 
-    res.json({
-      success: true,
-      message: 'Data infrastruktur berhasil dihapus'
-    });
+    sendResponse(res, undefined, 200, 'Data infrastruktur berhasil dihapus');
+
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Gagal menghapus data infrastruktur',
-      error: error.message
-    });
+    handleError(res, error, 'Gagal menghapus data infrastruktur');
   }
 };

@@ -1,94 +1,92 @@
 const DemographicData = require('../models/DemographicData');
 const Marker = require('../models/Marker');
 
+// --- HELPER FUNCTIONS ---
+
+const handleError = (res, error, message, status = 500) => {
+  res.status(status).json({
+    success: false,
+    message,
+    error: error.message
+  });
+};
+
+const sendResponse = (res, data, status = 200, message = null) => {
+  const response = { success: true };
+  if (message) response.message = message;
+  if (data !== undefined) response.data = data;
+  
+  res.status(status).json(response);
+};
+
+// --- CONTROLLERS ---
+
+// CREATE
 exports.createDemographicData = async (req, res) => {
   try {
     const { markerId, averageAge, populationDensity } = req.body;
 
+    // 1. Validasi Marker
     const marker = await Marker.findById(markerId);
     if (!marker) {
-      return res.status(404).json({
-        success: false,
-        message: 'Marker tidak ditemukan'
-      });
+      return handleError(res, { message: 'Not Found' }, 'Marker tidak ditemukan', 404);
     }
 
+    // 2. Validasi Duplikat
     const existingData = await DemographicData.findOne({ markerId });
     if (existingData) {
-      return res.status(400).json({
-        success: false,
-        message: 'Data demografi untuk marker ini sudah ada'
-      });
+      return handleError(res, { message: 'Duplicate' }, 'Data demografi untuk marker ini sudah ada', 400);
     }
 
-    const demographicData = await DemographicData.create({
+    // 3. Create & Populate
+    const newItem = await DemographicData.create({
       markerId,
       averageAge,
       populationDensity,
       createdBy: req.user.userId
     });
 
-    const populatedData = await DemographicData.findById(demographicData._id)
-      .populate('markerId');
+    const populatedData = await DemographicData.findById(newItem._id).populate('markerId');
 
-    res.status(201).json({
-      success: true,
-      message: 'Data demografi berhasil ditambahkan',
-      data: populatedData
-    });
+    sendResponse(res, populatedData, 201, 'Data demografi berhasil ditambahkan');
+
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Gagal menambahkan data demografi',
-      error: error.message
-    });
+    handleError(res, error, 'Gagal menambahkan data demografi');
   }
 };
 
+// GET ALL
 exports.getAllDemographicData = async (req, res) => {
   try {
     const data = await DemographicData.find()
       .populate('markerId')
       .sort({ createdAt: -1 });
 
-    res.json({
-      success: true,
-      data
-    });
+    sendResponse(res, data);
+
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Gagal mengambil data demografi',
-      error: error.message
-    });
+    handleError(res, error, 'Gagal mengambil data demografi');
   }
 };
 
+// GET BY MARKER ID
 exports.getDemographicDataByMarkerId = async (req, res) => {
   try {
     const data = await DemographicData.findOne({ markerId: req.params.markerId })
       .populate('markerId');
 
     if (!data) {
-      return res.status(404).json({
-        success: false,
-        message: 'Data demografi tidak ditemukan'
-      });
+      return handleError(res, { message: 'Not Found' }, 'Data demografi tidak ditemukan', 404);
     }
 
-    res.json({
-      success: true,
-      data
-    });
+    sendResponse(res, data);
+
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Gagal mengambil data demografi',
-      error: error.message
-    });
+    handleError(res, error, 'Gagal mengambil data demografi');
   }
 };
 
+// UPDATE
 exports.updateDemographicData = async (req, res) => {
   try {
     const { averageAge, populationDensity } = req.body;
@@ -100,46 +98,28 @@ exports.updateDemographicData = async (req, res) => {
     ).populate('markerId');
 
     if (!data) {
-      return res.status(404).json({
-        success: false,
-        message: 'Data demografi tidak ditemukan'
-      });
+      return handleError(res, { message: 'Not Found' }, 'Data demografi tidak ditemukan', 404);
     }
 
-    res.json({
-      success: true,
-      message: 'Data demografi berhasil diupdate',
-      data
-    });
+    sendResponse(res, data, 200, 'Data demografi berhasil diupdate');
+
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Gagal mengupdate data demografi',
-      error: error.message
-    });
+    handleError(res, error, 'Gagal mengupdate data demografi');
   }
 };
 
+// DELETE
 exports.deleteDemographicData = async (req, res) => {
   try {
     const data = await DemographicData.findByIdAndDelete(req.params.id);
 
     if (!data) {
-      return res.status(404).json({
-        success: false,
-        message: 'Data demografi tidak ditemukan'
-      });
+      return handleError(res, { message: 'Not Found' }, 'Data demografi tidak ditemukan', 404);
     }
 
-    res.json({
-      success: true,
-      message: 'Data demografi berhasil dihapus'
-    });
+    sendResponse(res, undefined, 200, 'Data demografi berhasil dihapus');
+
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Gagal menghapus data demografi',
-      error: error.message
-    });
+    handleError(res, error, 'Gagal menghapus data demografi');
   }
 };

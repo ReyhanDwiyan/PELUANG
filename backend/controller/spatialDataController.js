@@ -7,50 +7,57 @@ const DemographicData = require('../models/DemographicData');
 const EconomicData = require('../models/EconomicData');
 const InfrastructureData = require('../models/InfrastructureData');
 
-// @desc    CREATE - Tambah data spasial
-// @route   POST /api/spatial-data
-// @access  Private/Admin
+// --- HELPER FUNCTIONS ---
+
+const handleError = (res, error, message, status = 500) => {
+  console.error(message, error);
+  res.status(status).json({ success: false, message, error: error.message });
+};
+
+const sendResponse = (res, data, status = 200, extras = {}) => {
+  res.status(status).json({ success: true, ...extras, data });
+};
+
+// Rumus Scoring Terpusat (Biar konsisten di semua endpoint)
+const calculatePotentialScore = (age = 0, income = 0, density = 0, access = 0) => {
+  const ageScore = ((100 - age) / 100) * 25;
+  const incomeScore = Math.min(income / 10000000, 1) * 25;
+  const densityScore = Math.min(density / 10000, 1) * 25;
+  const accessScore = (access / 5) * 25;
+  return Math.round(ageScore + incomeScore + densityScore + accessScore);
+};
+
+// --- CONTROLLERS ---
+
+// CREATE
 exports.createSpatialData = async (req, res) => {
   try {
-    // DEBUG: log user dan body
-    console.log('REQ.USER:', req.user);
-    console.log('REQ.BODY:', req.body);
-
     const { markerId, averageAge, averageIncome, populationDensity, roadAccessibility } = req.body;
 
-    // Validasi input
-    if (!markerId || averageAge === undefined || averageIncome === undefined || populationDensity === undefined || roadAccessibility === undefined) {
-      return res.status(400).json({ success: false, message: 'Semua field wajib diisi.' });
+    // Validasi dasar
+    if (!markerId || [averageAge, averageIncome, populationDensity, roadAccessibility].includes(undefined)) {
+      return handleError(res, { message: 'Missing fields' }, 'Semua field wajib diisi', 400);
     }
+    
+    if (!req.user?._id) return handleError(res, { message: 'Unauthorized' }, 'User tidak valid', 401);
 
-    // Pastikan req.user ada dan _id valid
-    if (!req.user || !req.user._id) {
-      return res.status(401).json({ success: false, message: 'User tidak ditemukan atau belum login.' });
-    }
-
-    const data = {
+    const newSpatial = await SpatialData.create({
       markerId,
       averageAge,
       averageIncome,
       populationDensity,
       roadAccessibility,
-      createdBy: req.user._id // <-- PENTING: gunakan _id
-    };
+      createdBy: req.user._id
+    });
 
-    // DEBUG: log data yang akan disimpan
-    console.log('SpatialData input:', data);
+    sendResponse(res, newSpatial);
 
-    const newSpatial = await SpatialData.create(data);
-    res.json({ success: true, data: newSpatial });
   } catch (err) {
-    console.error('SpatialData CREATE ERROR:', err); // WAJIB
-    res.status(500).json({ success: false, message: err.message });
+    handleError(res, err, 'Gagal membuat data spasial');
   }
 };
 
-// @desc    READ ALL - Get all spatial data
-// @route   GET /api/spatial-data
-// @access  Private
+// READ ALL
 exports.getAllSpatialData = async (req, res) => {
   try {
     const spatialData = await SpatialData.find()
@@ -58,226 +65,140 @@ exports.getAllSpatialData = async (req, res) => {
       .populate('createdBy', 'username email')
       .sort({ potentialScore: -1 });
 
-    res.json({
-      success: true,
-      count: spatialData.length,
-      data: spatialData
-    });
+    sendResponse(res, spatialData, 200, { count: spatialData.length });
+
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching spatial data',
-      error: error.message
-    });
+    handleError(res, error, 'Error fetching spatial data');
   }
 };
 
-// @desc    READ ONE - Get spatial data by marker ID
-// @route   GET /api/spatial-data/marker/:markerId
-// @access  Private
+// READ ONE
 exports.getSpatialDataByMarker = async (req, res) => {
   try {
     const spatialData = await SpatialData.findOne({ markerId: req.params.markerId })
       .populate('markerId')
       .populate('createdBy', 'username email');
 
-    if (!spatialData) {
-      return res.status(404).json({
-        success: false,
-        message: 'Data spasial tidak ditemukan untuk marker ini'
-      });
-    }
+    if (!spatialData) return handleError(res, { message: 'Not Found' }, 'Data spasial tidak ditemukan', 404);
 
-    res.json({
-      success: true,
-      data: spatialData
-    });
+    sendResponse(res, spatialData);
+
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching spatial data',
-      error: error.message
-    });
+    handleError(res, error, 'Error fetching spatial data');
   }
 };
 
-// @desc    UPDATE - Update spatial data
-// @route   PUT /api/spatial-data/:id
-// @access  Private/Admin
+// UPDATE
 exports.updateSpatialData = async (req, res) => {
   try {
-    const {
-      averageAge,
-      averageIncome,
-      populationDensity,
-      roadAccessibility
-    } = req.body;
-
     const spatialData = await SpatialData.findById(req.params.id);
+    if (!spatialData) return handleError(res, { message: 'Not Found' }, 'Data spasial tidak ditemukan', 404);
 
-    if (!spatialData) {
-      return res.status(404).json({
-        success: false,
-        message: 'Data spasial tidak ditemukan'
-      });
-    }
-
-    // Update fields
-    if (averageAge !== undefined) spatialData.averageAge = averageAge;
-    if (averageIncome !== undefined) spatialData.averageIncome = averageIncome;
-    if (populationDensity !== undefined) spatialData.populationDensity = populationDensity;
-    if (roadAccessibility !== undefined) spatialData.roadAccessibility = roadAccessibility;
+    const fields = ['averageAge', 'averageIncome', 'populationDensity', 'roadAccessibility'];
+    fields.forEach(field => {
+      if (req.body[field] !== undefined) spatialData[field] = req.body[field];
+    });
 
     spatialData.updatedAt = Date.now();
+    await spatialData.save(); // Trigger pre-save hook for score calculation
 
-    await spatialData.save(); // Pre-save hook akan recalculate potentialScore
+    sendResponse(res, spatialData, 200, { message: 'Data spasial berhasil diupdate' });
 
-    res.json({
-      success: true,
-      message: 'Data spasial berhasil diupdate',
-      data: spatialData
-    });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Error updating spatial data',
-      error: error.message
-    });
+    handleError(res, error, 'Error updating spatial data');
   }
 };
 
-// @desc    DELETE - Delete spatial data
-// @route   DELETE /api/spatial-data/:id
-// @access  Private/Admin
+// DELETE
 exports.deleteSpatialData = async (req, res) => {
   try {
     const spatialData = await SpatialData.findByIdAndDelete(req.params.id);
+    if (!spatialData) return handleError(res, { message: 'Not Found' }, 'Data spasial tidak ditemukan', 404);
 
-    if (!spatialData) {
-      return res.status(404).json({
-        success: false,
-        message: 'Data spasial tidak ditemukan'
-      });
-    }
+    sendResponse(res, null, 200, { message: 'Data spasial berhasil dihapus' });
 
-    res.json({
-      success: true,
-      message: 'Data spasial berhasil dihapus'
-    });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Error deleting spatial data',
-      error: error.message
-    });
+    handleError(res, error, 'Error deleting spatial data');
   }
 };
 
-// @desc    GET STATISTICS - Get analysis statistics
-// @route   GET /api/spatial-data/statistics
-// @access  Private
+// STATISTICS
 exports.getStatistics = async (req, res) => {
   try {
-    const stats = await SpatialData.aggregate([
-      {
-        $group: {
-          _id: null,
-          avgPotentialScore: { $avg: '$potentialScore' },
-          maxPotentialScore: { $max: '$potentialScore' },
-          minPotentialScore: { $min: '$potentialScore' },
-          avgAge: { $avg: '$averageAge' },
-          avgIncome: { $avg: '$averageIncome' },
-          avgDensity: { $avg: '$populationDensity' },
-          totalLocations: { $sum: 1 }
+    const [stats, topLocations] = await Promise.all([
+      SpatialData.aggregate([
+        {
+          $group: {
+            _id: null,
+            avgPotentialScore: { $avg: '$potentialScore' },
+            maxPotentialScore: { $max: '$potentialScore' },
+            minPotentialScore: { $min: '$potentialScore' },
+            avgAge: { $avg: '$averageAge' },
+            avgIncome: { $avg: '$averageIncome' },
+            avgDensity: { $avg: '$populationDensity' },
+            totalLocations: { $sum: 1 }
+          }
         }
-      }
+      ]),
+      SpatialData.find()
+        .populate('markerId', 'title latitude longitude category')
+        .sort({ potentialScore: -1 })
+        .limit(5)
     ]);
 
-    const topLocations = await SpatialData.find()
-      .populate('markerId', 'title latitude longitude category')
-      .sort({ potentialScore: -1 })
-      .limit(5);
+    sendResponse(res, { statistics: stats[0] || {}, topLocations });
 
-    res.json({
-      success: true,
-      data: {
-        statistics: stats[0] || {},
-        topLocations
-      }
-    });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching statistics',
-      error: error.message
-    });
+    handleError(res, error, 'Error fetching statistics');
   }
 };
 
+// UPLOAD DATA
 exports.uploadSpatialData = async (req, res) => {
   try {
     const file = req.file;
-    if (!file) return res.status(400).json({ message: 'No file uploaded' });
+    if (!file) return handleError(res, { message: 'Missing file' }, 'No file uploaded', 400);
 
     let records = [];
+    
+    // Parse logic
     if (file.mimetype === 'text/csv' || file.originalname.endsWith('.csv')) {
       const parser = fs.createReadStream(file.path).pipe(parse({ columns: true, skip_empty_lines: true }));
-      for await (const record of parser) {
-        records.push(record);
-      }
-    } else if (
-      file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
-      file.mimetype === 'application/vnd.ms-excel' ||
-      file.originalname.endsWith('.xlsx')
-    ) {
+      for await (const record of parser) records.push(record);
+    } else if (file.originalname.match(/\.(xlsx|xls)$/)) {
       const workbook = XLSX.readFile(file.path);
       const sheetName = workbook.SheetNames[0];
       records = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
     } else {
-      return res.status(400).json({ message: 'Unsupported file type' });
+      return handleError(res, { message: 'Invalid type' }, 'Unsupported file type', 400);
     }
 
-    // Tambahkan createdBy ke setiap record
-    const userId = req.user.id;
-    records = records.map(r => ({
-      ...r,
-      createdBy: userId
-    }));
+    // Add Creator ID
+    const dataToInsert = records.map(r => ({ ...r, createdBy: req.user.id }));
+    const inserted = await SpatialData.insertMany(dataToInsert);
+    
+    fs.unlinkSync(file.path); // Clean up
+    sendResponse(res, null, 200, { message: 'Data uploaded successfully', count: inserted.length });
 
-    const inserted = await SpatialData.insertMany(records);
-    fs.unlinkSync(file.path); // Hapus file setelah diproses
-    res.json({ message: 'Data uploaded successfully', count: inserted.length });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    if (req.file) fs.unlinkSync(req.file.path); // Clean up on error
+    handleError(res, err, err.message);
   }
-}
-/**
- * @desc    Prediksi potensi bisnis berdasarkan lokasi, kategori, harga produk
- * @route   POST /api/spatial-data/predict
- * @access  Public/User
- * @body    { latitude, longitude, category, price }
- */
+};
+
+// PREDICT
 exports.predictBusinessPotential = async (req, res) => {
   try {
     const { latitude, longitude, category, price } = req.body;
-    if (
-      typeof latitude !== 'number' ||
-      typeof longitude !== 'number' ||
-      !category ||
-      typeof price !== 'number'
-    ) {
-      return res.status(400).json({ success: false, message: 'Invalid input' });
+    
+    if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+      return handleError(res, { message: 'Invalid Input' }, 'Invalid coords', 400);
     }
 
-    // Ambil data spasial terdekat (radius 2km)
+    // Cari data terdekat (Aggregation Pipeline)
     const spatial = await SpatialData.aggregate([
       {
-        $lookup: {
-          from: 'markers',
-          localField: 'markerId',
-          foreignField: '_id',
-          as: 'marker'
-        }
+        $lookup: { from: 'markers', localField: 'markerId', foreignField: '_id', as: 'marker' }
       },
       { $unwind: '$marker' },
       {
@@ -296,28 +217,26 @@ exports.predictBusinessPotential = async (req, res) => {
       { $limit: 1 }
     ]);
 
-    if (!spatial.length) {
-      return res.status(404).json({ success: false, message: 'No nearby data found' });
-    }
+    if (!spatial.length) return handleError(res, { message: 'Not Found' }, 'No nearby data found', 404);
 
     const data = spatial[0];
+    
+    // Gunakan Helper Function untuk hitung skor
+    const score = calculatePotentialScore(
+      data.averageAge, 
+      data.averageIncome, 
+      data.populationDensity, 
+      data.roadAccessibility
+    );
 
-    // Rumus skor (sesuaikan dengan kebutuhan)
-    let score = 0;
-    score += (100 - data.averageAge) * 0.25;
-    score += (data.averageIncome / 10000000) * 25;
-    score += (data.populationDensity / 10000) * 25;
-    score += (data.roadAccessibility / 5) * 25;
-
-    // Kategori
+    // Labeling
     let categoryLabel = 'Rendah';
     if (score >= 75) categoryLabel = 'Sangat Tinggi';
     else if (score >= 60) categoryLabel = 'Tinggi';
     else if (score >= 40) categoryLabel = 'Sedang';
 
-    res.json({
-      success: true,
-      score: Math.round(score),
+    sendResponse(res, {
+      score,
       category: categoryLabel,
       detail: {
         averageAge: data.averageAge,
@@ -326,149 +245,113 @@ exports.predictBusinessPotential = async (req, res) => {
         roadAccessibility: data.roadAccessibility
       }
     });
+
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    handleError(res, err, err.message);
   }
 };
 
+// GET COMBINED DATA (Complex Merge Logic Refactored)
 exports.getAllCombinedData = async (req, res) => {
   try {
     const [demographics, economics, infrastructures] = await Promise.all([
-      DemographicData.find().populate('markerId'),
-      EconomicData.find().populate('markerId'),
-      InfrastructureData.find().populate('markerId')
+      DemographicData.find().populate('markerId').lean(), // .lean() biar lebih ringan
+      EconomicData.find().populate('markerId').lean(),
+      InfrastructureData.find().populate('markerId').lean()
     ]);
 
     const combinedMap = new Map();
 
+    // Helper kecil untuk init atau get object di Map
+    const getOrInit = (id, doc) => {
+      if (!combinedMap.has(id)) {
+        combinedMap.set(id, {
+          markerId: doc.markerId,
+          averageAge: 0, populationDensity: 0, averageIncome: 0, roadAccessibility: 0,
+          createdAt: doc.createdAt, updatedAt: doc.updatedAt
+        });
+      }
+      return combinedMap.get(id);
+    };
+
+    // Merging Process
     demographics.forEach(d => {
       if (d.markerId) {
-        combinedMap.set(d.markerId._id.toString(), {
-          _id: d._id,
-          markerId: d.markerId,
-          averageAge: d.averageAge,
-          populationDensity: d.populationDensity,
-          averageIncome: 0,
-          roadAccessibility: 0,
-          createdAt: d.createdAt,
-          updatedAt: d.updatedAt
-        });
+        const item = getOrInit(d.markerId._id.toString(), d);
+        item.averageAge = d.averageAge;
+        item.populationDensity = d.populationDensity;
       }
     });
 
     economics.forEach(e => {
       if (e.markerId) {
-        const key = e.markerId._id.toString();
-        if (combinedMap.has(key)) {
-          combinedMap.get(key).averageIncome = e.averageIncome;
-        } else {
-          combinedMap.set(key, {
-            _id: e._id,
-            markerId: e.markerId,
-            averageAge: 0,
-            populationDensity: 0,
-            averageIncome: e.averageIncome,
-            roadAccessibility: 0,
-            createdAt: e.createdAt,
-            updatedAt: e.updatedAt
-          });
-        }
+        const item = getOrInit(e.markerId._id.toString(), e);
+        item.averageIncome = e.averageIncome;
       }
     });
 
     infrastructures.forEach(i => {
       if (i.markerId) {
-        const key = i.markerId._id.toString();
-        if (combinedMap.has(key)) {
-          combinedMap.get(key).roadAccessibility = i.roadAccessibility;
-        } else {
-          combinedMap.set(key, {
-            _id: i._id,
-            markerId: i.markerId,
-            averageAge: 0,
-            populationDensity: 0,
-            averageIncome: 0,
-            roadAccessibility: i.roadAccessibility,
-            createdAt: i.createdAt,
-            updatedAt: i.updatedAt
-          });
-        }
+        const item = getOrInit(i.markerId._id.toString(), i);
+        item.roadAccessibility = i.roadAccessibility;
       }
     });
 
-    const combinedData = Array.from(combinedMap.values()).map(item => {
-      const ageScore = ((100 - item.averageAge) / 100) * 25;
-      const incomeScore = Math.min(item.averageIncome / 10000000, 1) * 25;
-      const densityScore = Math.min(item.populationDensity / 10000, 1) * 25;
-      const accessScore = (item.roadAccessibility / 5) * 25;
-      const potentialScore = Math.round(ageScore + incomeScore + densityScore + accessScore);
+    // Calculate Scores & Final Array
+    const combinedData = Array.from(combinedMap.values()).map(item => ({
+      ...item,
+      potentialScore: calculatePotentialScore(
+        item.averageAge, 
+        item.averageIncome, 
+        item.populationDensity, 
+        item.roadAccessibility
+      )
+    }));
 
-      return {
-        ...item,
-        potentialScore
-      };
-    });
+    sendResponse(res, combinedData);
 
-    res.json({
-      success: true,
-      data: combinedData
-    });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Gagal mengambil data gabungan',
-      error: error.message
-    });
+    handleError(res, error, 'Gagal mengambil data gabungan');
   }
 };
 
+// GET COMBINED BY ID
 exports.getCombinedDataByMarkerId = async (req, res) => {
   try {
     const { markerId } = req.params;
 
     const [demographic, economic, infrastructure] = await Promise.all([
-      DemographicData.findOne({ markerId }).populate('markerId'),
-      EconomicData.findOne({ markerId }).populate('markerId'),
-      InfrastructureData.findOne({ markerId }).populate('markerId')
+      DemographicData.findOne({ markerId }).populate('markerId').lean(),
+      EconomicData.findOne({ markerId }).populate('markerId').lean(),
+      InfrastructureData.findOne({ markerId }).populate('markerId').lean()
     ]);
 
     if (!demographic && !economic && !infrastructure) {
-      return res.status(404).json({
-        success: false,
-        message: 'Data tidak ditemukan untuk marker ini'
-      });
+      return handleError(res, { message: 'Not Found' }, 'Data tidak ditemukan', 404);
     }
 
-    const averageAge = demographic?.averageAge || 0;
-    const averageIncome = economic?.averageIncome || 0;
-    const populationDensity = demographic?.populationDensity || 0;
-    const roadAccessibility = infrastructure?.roadAccessibility || 0;
+    // Extract values safely
+    const baseData = demographic || economic || infrastructure;
+    const avgAge = demographic?.averageAge || 0;
+    const avgIncome = economic?.averageIncome || 0;
+    const popDensity = demographic?.populationDensity || 0;
+    const roadAccess = infrastructure?.roadAccessibility || 0;
 
-    const ageScore = ((100 - averageAge) / 100) * 25;
-    const incomeScore = Math.min(averageIncome / 10000000, 1) * 25;
-    const densityScore = Math.min(populationDensity / 10000, 1) * 25;
-    const accessScore = (roadAccessibility / 5) * 25;
-    const potentialScore = Math.round(ageScore + incomeScore + densityScore + accessScore);
+    const data = {
+      _id: baseData._id,
+      markerId: baseData.markerId,
+      averageAge: avgAge,
+      averageIncome: avgIncome,
+      populationDensity: popDensity,
+      roadAccessibility: roadAccess,
+      potentialScore: calculatePotentialScore(avgAge, avgIncome, popDensity, roadAccess),
+      createdAt: baseData.createdAt,
+      updatedAt: baseData.updatedAt
+    };
 
-    res.json({
-      success: true,
-      data: {
-        _id: demographic?._id || economic?._id || infrastructure?._id,
-        markerId: demographic?.markerId || economic?.markerId || infrastructure?.markerId,
-        averageAge,
-        averageIncome,
-        populationDensity,
-        roadAccessibility,
-        potentialScore,
-        createdAt: demographic?.createdAt || economic?.createdAt || infrastructure?.createdAt,
-        updatedAt: demographic?.updatedAt || economic?.updatedAt || infrastructure?.updatedAt
-      }
-    });
+    sendResponse(res, data);
+
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Gagal mengambil data gabungan',
-      error: error.message
-    });
+    handleError(res, error, 'Gagal mengambil data gabungan');
   }
 };
