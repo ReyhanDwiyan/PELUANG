@@ -1,12 +1,11 @@
 const PopulationData = require('../models/PopulationData');
 const RoadAccessibilityData = require('../models/RoadAccessibilityData');
-const EconomicData = require('../models/EconomicData'); // Kita asumsikan ini masih ada/dipakai
+const EconomicData = require('../models/EconomicData');
 const Marker = require('../models/Marker');
 const { handleError, sendResponse } = require('../utils/responseHandler');
 
-// --- HELPER SCORING (Tetap sama) ---
+// --- HELPER SCORING ---
 const calculatePotentialScore = (age = 0, income = 0, density = 0, access = 0) => {
-  // Cegah nilai null/undefined merusak kalkulasi
   const safeAge = age || 0;
   const safeIncome = income || 0;
   const safeDensity = density || 0;
@@ -20,65 +19,90 @@ const calculatePotentialScore = (age = 0, income = 0, density = 0, access = 0) =
   return Math.round(ageScore + incomeScore + densityScore + accessScore);
 };
 
-// --- 1. CREATE POPULATION DATA ---
+// --- 1. CREATE SPATIAL DATA (GABUNGAN) ---
+exports.createSpatialData = async (req, res) => {
+  try {
+    const { markerId, averageAge, averageIncome, populationDensity, roadAccessibility } = req.body;
+
+    if (!markerId) {
+      return handleError(res, { message: 'Validation Error' }, 'Marker ID wajib diisi', 400);
+    }
+
+    // Gunakan findOneAndUpdate dengan upsert agar aman jika data parsial sudah ada
+    const operations = [
+      PopulationData.findOneAndUpdate(
+        { markerId },
+        { markerId, averageAge, populationDensity, createdBy: req.user?._id },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      ),
+      RoadAccessibilityData.findOneAndUpdate(
+        { markerId },
+        { markerId, roadAccessibility, createdBy: req.user?._id },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      ),
+      EconomicData.findOneAndUpdate(
+        { markerId },
+        { markerId, averageIncome, createdBy: req.user?._id },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      )
+    ];
+
+    await Promise.all(operations);
+
+    sendResponse(res, { success: true }, 201, { message: 'Data spasial berhasil disimpan' });
+  } catch (error) {
+    handleError(res, error, 'Gagal menyimpan data spasial');
+  }
+};
+
+// --- 2. UPDATE SPATIAL DATA (GABUNGAN) ---
+exports.updateSpatialData = async (req, res) => {
+  try {
+    const markerId = req.params.id; // ID yang dikirim frontend adalah markerId
+    const { averageAge, averageIncome, populationDensity, roadAccessibility } = req.body;
+
+    const operations = [
+      PopulationData.findOneAndUpdate({ markerId }, { averageAge, populationDensity }, { new: true }),
+      RoadAccessibilityData.findOneAndUpdate({ markerId }, { roadAccessibility }, { new: true }),
+      EconomicData.findOneAndUpdate({ markerId }, { averageIncome }, { new: true })
+    ];
+
+    await Promise.all(operations);
+
+    sendResponse(res, { success: true }, 200, { message: 'Data spasial berhasil diupdate' });
+  } catch (error) {
+    handleError(res, error, 'Gagal mengupdate data spasial');
+  }
+};
+
+// --- 3. CREATE DATA TERPISAH (LEGACY/OPTIONAL) ---
 exports.createPopulationData = async (req, res) => {
   try {
     const { markerId, populationDensity, averageAge } = req.body;
-
-    if (!markerId || populationDensity === undefined || averageAge === undefined) {
-      return handleError(res, { message: 'Validation Error' }, 'Marker ID, Density, dan Age wajib diisi', 400);
-    }
-
-    // Cek duplikat
-    const existing = await PopulationData.findOne({ markerId });
-    if (existing) {
-      return handleError(res, { message: 'Duplicate' }, 'Data populasi untuk marker ini sudah ada', 400);
-    }
-
-    const newData = await PopulationData.create({
-      markerId,
-      populationDensity,
-      averageAge,
-      createdBy: req.user._id
-    });
-
-    sendResponse(res, newData, 201, { message: 'Data populasi berhasil ditambahkan' });
+    if (!markerId) return handleError(res, {}, 'Marker ID Required', 400);
+    
+    const newData = await PopulationData.create({ ...req.body, createdBy: req.user?._id });
+    sendResponse(res, newData, 201);
   } catch (error) {
-    handleError(res, error, 'Gagal menambahkan data populasi');
+    handleError(res, error, 'Gagal input populasi');
   }
 };
 
-// --- 2. CREATE ROAD ACCESSIBILITY DATA ---
 exports.createRoadAccessibilityData = async (req, res) => {
   try {
-    const { markerId, roadAccessibility } = req.body;
+    const { markerId } = req.body;
+    if (!markerId) return handleError(res, {}, 'Marker ID Required', 400);
 
-    if (!markerId || roadAccessibility === undefined) {
-      return handleError(res, { message: 'Validation Error' }, 'Marker ID dan Road Accessibility wajib diisi', 400);
-    }
-
-    const existing = await RoadAccessibilityData.findOne({ markerId });
-    if (existing) {
-      return handleError(res, { message: 'Duplicate' }, 'Data jalan untuk marker ini sudah ada', 400);
-    }
-
-    const newData = await RoadAccessibilityData.create({
-      markerId,
-      roadAccessibility,
-      createdBy: req.user._id
-    });
-
-    sendResponse(res, newData, 201, { message: 'Data akses jalan berhasil ditambahkan' });
+    const newData = await RoadAccessibilityData.create({ ...req.body, createdBy: req.user?._id });
+    sendResponse(res, newData, 201);
   } catch (error) {
-    handleError(res, error, 'Gagal menambahkan data jalan');
+    handleError(res, error, 'Gagal input akses jalan');
   }
 };
 
-// --- 3. GET COMBINED DATA (Untuk Peta & Dashboard) ---
-// Menggabungkan Population + Road + Economic (jika ada)
+// --- 4. GET COMBINED DATA (Perbaikan _id untuk Key React) ---
 exports.getAllCombinedData = async (req, res) => {
   try {
-    // Ambil semua data secara paralel agar cepat
     const [populations, roads, economics] = await Promise.all([
       PopulationData.find().populate('markerId').lean(),
       RoadAccessibilityData.find().populate('markerId').lean(),
@@ -87,13 +111,13 @@ exports.getAllCombinedData = async (req, res) => {
 
     const combinedMap = new Map();
 
-    // Helper untuk merge data
     const mergeData = (item, type) => {
       if (!item.markerId) return;
       const key = item.markerId._id.toString();
       
       if (!combinedMap.has(key)) {
         combinedMap.set(key, {
+          _id: item.markerId._id, // PERBAIKAN: Set _id agar React key unik
           markerId: item.markerId,
           averageAge: 0,
           populationDensity: 0,
@@ -114,18 +138,15 @@ exports.getAllCombinedData = async (req, res) => {
         entry.averageIncome = item.averageIncome;
       }
       
-      // Update timestamp ke yang paling baru
       if (new Date(item.updatedAt) > new Date(entry.lastUpdated)) {
         entry.lastUpdated = item.updatedAt;
       }
     };
 
-    // Proses merging
     populations.forEach(p => mergeData(p, 'population'));
     roads.forEach(r => mergeData(r, 'road'));
     economics.forEach(e => mergeData(e, 'economic'));
 
-    // Hitung Skor Potensi Final
     const finalData = Array.from(combinedMap.values()).map(item => ({
       ...item,
       potentialScore: calculatePotentialScore(
@@ -143,16 +164,14 @@ exports.getAllCombinedData = async (req, res) => {
   }
 };
 
-// --- 4. PREDICT BUSINESS POTENTIAL (Logic Baru) ---
+// --- 5. PREDICT BUSINESS POTENTIAL ---
 exports.predictBusinessPotential = async (req, res) => {
   try {
     const { latitude, longitude } = req.body;
 
-    // 1. Cari Marker Terdekat
     const markers = await Marker.find({ isActive: true }).lean();
     if (!markers.length) return handleError(res, { message: 'Not Found' }, 'Belum ada marker tersedia', 404);
 
-    // Hitung jarak manual (Haversine simple) atau cari yang terdekat
     let nearestMarker = null;
     let minDist = Infinity;
 
@@ -167,9 +186,8 @@ exports.predictBusinessPotential = async (req, res) => {
       }
     });
 
-    if (!nearestMarker) return handleError(res, { message: 'Not Found' }, 'Lokasi terlalu jauh dari data yang ada', 404);
+    if (!nearestMarker) return handleError(res, { message: 'Not Found' }, 'Lokasi terlalu jauh', 404);
 
-    // 2. Ambil Data Detail dari Koleksi Terpisah
     const [popData, roadData, ecoData] = await Promise.all([
       PopulationData.findOne({ markerId: nearestMarker._id }).lean(),
       RoadAccessibilityData.findOne({ markerId: nearestMarker._id }).lean(),
@@ -183,7 +201,6 @@ exports.predictBusinessPotential = async (req, res) => {
       averageIncome: ecoData?.averageIncome || 0
     };
 
-    // 3. Hitung Skor
     const score = calculatePotentialScore(
       data.averageAge, 
       data.averageIncome, 
@@ -202,5 +219,30 @@ exports.predictBusinessPotential = async (req, res) => {
 
   } catch (error) {
     handleError(res, error, 'Gagal melakukan prediksi');
+  }
+};
+
+// --- 6. DELETE SPATIAL DATA (Fungsi Baru untuk Fix Error 404 Delete) ---
+exports.deleteSpatialData = async (req, res) => {
+  try {
+    const markerId = req.params.id;
+
+    if (!markerId) {
+      return handleError(res, { message: 'Validation Error' }, 'ID tidak valid', 400);
+    }
+
+    // Hapus data dari ketiga koleksi sekaligus secara paralel
+    const operations = [
+      PopulationData.findOneAndDelete({ markerId }),
+      RoadAccessibilityData.findOneAndDelete({ markerId }),
+      EconomicData.findOneAndDelete({ markerId })
+    ];
+
+    await Promise.all(operations);
+
+    // Kirim response sukses
+    sendResponse(res, { success: true }, 200, { message: 'Data spasial berhasil dihapus' });
+  } catch (error) {
+    handleError(res, error, 'Gagal menghapus data spasial');
   }
 };
