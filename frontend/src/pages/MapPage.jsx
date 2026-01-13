@@ -58,7 +58,7 @@ const MapPage = () => {
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState(null);
-  
+
   // STATE UTAMA
   const [formData, setFormData] = useState({
     title: '',
@@ -67,7 +67,7 @@ const MapPage = () => {
     address: '',
     rating: 0
   });
-  
+
   const [popup, setPopup] = useState({ show: false, lat: null, lng: null });
   const [result, setResult] = useState(null);
 
@@ -107,7 +107,7 @@ const MapPage = () => {
   const handleMapClick = (latlng) => {
     resetForm(); // Reset saat klik peta
     setSelectedLocation(latlng);
-    
+
     if (isAdmin) setShowAddForm(true);
     // Untuk user biasa, hanya tampilkan popup analisis potensi
     if (!isAdmin) setPopup({ show: true, lat: latlng.lat, lng: latlng.lng });
@@ -176,16 +176,19 @@ const MapPage = () => {
   const handleAnalyzeSubmit = async (e) => {
     e.preventDefault();
     setResult(null);
+    setLoading(true);
     try {
+      // PERBAIKAN: Mengirimkan popup lat/lng DAN seluruh field dari formData
       const res = await spatialDataAPI.predict({
         latitude: popup.lat,
         longitude: popup.lng,
-        category: formData.category,
-        price: parseFloat(formData.rating)
+        ...formData 
       });
       setResult(res.data);
     } catch (err) {
       setResult({ success: false, message: err.response?.data?.message || 'Gagal prediksi' });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -504,6 +507,52 @@ const MapPage = () => {
                         <option value="4">4 - Terbuka Sebagian</option>
                         <option value="5">5 - Terbuka Penuh (Outdoor Luas)</option>
                       </select>
+                    </div>
+                  </div>
+                )}
+
+                {formData.category === 'warung' && (
+                  <div className="extra-fields-section">
+                    <h4 style={{ fontSize: '14px', margin: '0 0 10px 0', color: '#36d6ff' }}>Detail Warung</h4>
+
+                    {/* 1. Traffic Flow Side */}
+                    <div className="form-group">
+                      <label>Sisi Arus Jalan</label>
+                      <select name="trafficFlowSide" onChange={handleInputChange} required className="custom-select">
+                        <option value="">-- Pilih Sisi --</option>
+                        <option value="Home_Bound_Side">Home Bound (Arah Pulang Rumah)</option>
+                        <option value="Work_Bound_Side">Work Bound (Arah Berangkat Kerja)</option>
+                      </select>
+                    </div>
+
+                    {/* 2. Social Hub Proximity */}
+                    <div className="form-group">
+                      <label>Jarak ke Titik Kumpul (Meter)</label>
+                      <input
+                        type="number"
+                        name="socialHubProximity"
+                        placeholder="Contoh: 50"
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+
+                    {/* 3. Visibility Score */}
+                    <div className="form-group">
+                      <label>Visibilitas / Blind Spot (0-100%)</label>
+                      <input
+                        type="range"
+                        name="visibilityScore"
+                        min="0"
+                        max="100"
+                        step="1"
+                        defaultValue="50"
+                        onChange={handleInputChange}
+                        style={{ width: '100%' }}
+                      />
+                      <span style={{ fontSize: '12px', color: '#eaf0ff' }}>
+                        {formData.visibilityScore || 50}% Terlihat
+                      </span>
                     </div>
                   </div>
                 )}
