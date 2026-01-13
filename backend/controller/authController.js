@@ -1,68 +1,27 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-
-// --- HELPER FUNCTIONS (Untuk mengurangi repetisi) ---
-
-// 1. Format respon user agar bersih (tanpa password)
-const sanitizeUser = (user) => ({
-  _id: user._id,
-  username: user.username,
-  email: user.email,
-  role: user.role,
-  createdAt: user.createdAt
-});
-
-// 2. Standard error handler untuk server error
-const handleError = (res, error, context) => {
-  console.error(`${context} error:`, error);
-  res.status(500).json({
-    success: false,
-    message: 'Server error',
-    error: error.message
-  });
-};
-
-// 3. Helper untuk mengirim Token & Cookie (Khusus Login)
-const sendTokenResponse = (user, statusCode, res) => {
-  const token = user.getSignedJwtToken();
-  
-  const options = {
-    httpOnly: true,
-    expires: new Date(Date.now() + process.env.JWT_COOKIE_EXPIRE * 24 * 60 * 60 * 1000),
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax'
-  };
-
-  res
-    .status(statusCode)
-    .cookie('token', token, options)
-    .json({
-      success: true,
-      message: 'Login berhasil',
-      data: sanitizeUser(user),
-      token
-    });
-};
-
-// --- MAIN CONTROLLERS ---
+const { handleError, sendResponse } = require('../utils/responseHandler'); // <-- Import Helper
 
 // REGISTER
 exports.register = async (req, res) => {
   try {
     const { username, email, password } = req.body;
 
+    // Validasi input
     if (!username || !email || !password) {
-      return res.status(400).json({ success: false, message: 'Semua field harus diisi' });
+      return handleError(res, { message: 'Validation Error' }, 'Semua field harus diisi', 400);
     }
 
+    // Cek user existing
     const existingUser = await User.findOne({ $or: [{ email }, { username }] });
     if (existingUser) {
-      return res.status(400).json({ success: false, message: 'Username atau email sudah terdaftar' });
+      return handleError(res, { message: 'Duplicate Error' }, 'Username atau email sudah terdaftar', 400);
     }
 
+    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
-    
+
+    // Buat user
     const user = await User.create({
       username,
       email,
@@ -70,15 +29,20 @@ exports.register = async (req, res) => {
       role: 'user'
     });
 
-    // Response 201 Created (Tanpa cookie/token sesuai kode asli)
-    res.status(201).json({
-      success: true,
-      message: 'Registrasi berhasil',
-      data: sanitizeUser(user)
-    });
+    // Format data user agar password tidak ikut terkirim
+    const userResponse = {
+      _id: user._id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      createdAt: user.createdAt
+    };
+
+    // Paka helper sendResponse (Lebih ringkas)
+    sendResponse(res, userResponse, 201, { message: 'Registrasi berhasil' });
 
   } catch (error) {
-    handleError(res, error, 'Register');
+    handleError(res, error, 'Register error');
   }
 };
 
@@ -86,27 +50,47 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    console.log('Login attempt:', { email });
 
     if (!email || !password) {
-      return res.status(400).json({ success: false, message: 'Email dan password harus diisi' });
+      return handleError(res, { message: 'Validation Error' }, 'Email dan password harus diisi', 400);
     }
 
     const user = await User.findOne({ email }).select('+password');
     if (!user) {
-      return res.status(401).json({ success: false, message: 'Email atau password salah' });
+      return handleError(res, { message: 'Auth Error' }, 'Email atau password salah', 401);
     }
 
     const isPasswordValid = await user.matchPassword(password);
     if (!isPasswordValid) {
-      return res.status(401).json({ success: false, message: 'Email atau password salah' });
+      return handleError(res, { message: 'Auth Error' }, 'Email atau password salah', 401);
     }
 
-    // Gunakan helper untuk handle token & cookie
-    sendTokenResponse(user, 200, res);
+    const token = user.getSignedJwtToken();
+
+    const userResponse = {
+      _id: user._id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      createdAt: user.createdAt
+    };
+
+    // Set Cookie manual (Helper kita tidak handle cookie secara default)
+    res.cookie('token', token, {
+      httpOnly: true,
+      expires: new Date(Date.now() + process.env.JWT_COOKIE_EXPIRE * 24 * 60 * 60 * 1000),
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax'
+    });
+
+    // Kirim response pakai helper
+    sendResponse(res, userResponse, 200, { 
+      message: 'Login berhasil', 
+      token 
+    });
 
   } catch (error) {
-    handleError(res, error, 'Login');
+    handleError(res, error, 'Login error');
   }
 };
 
@@ -118,30 +102,32 @@ exports.logout = async (req, res) => {
       httpOnly: true
     });
 
-    res.json({ success: true, message: 'Logout berhasil' });
+    sendResponse(res, null, 200, { message: 'Logout berhasil' });
 
   } catch (error) {
-    handleError(res, error, 'Logout');
+    handleError(res, error, 'Logout error');
   }
 };
 
 // GET CURRENT USER
 exports.getCurrentUser = async (req, res) => {
   try {
-    const userId = req.headers['user-id']; // Logic asli dipertahankan
+    // Sesuai request: Pakai header manual (walaupun tidak secure, tapi anti-ribet)
+    const userId = req.headers['user-id'];
 
     if (!userId) {
-      return res.status(401).json({ success: false, message: 'User ID tidak ditemukan' });
+      return handleError(res, { message: 'Auth Error' }, 'User ID tidak ditemukan', 401);
     }
 
     const user = await User.findById(userId).select('-password');
+
     if (!user) {
-      return res.status(404).json({ success: false, message: 'User tidak ditemukan' });
+      return handleError(res, { message: 'Not Found' }, 'User tidak ditemukan', 404);
     }
 
-    res.json({ success: true, data: user });
+    sendResponse(res, user);
 
   } catch (error) {
-    handleError(res, error, 'Get current user');
+    handleError(res, error, 'Get current user error');
   }
 };
