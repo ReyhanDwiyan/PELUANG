@@ -167,8 +167,37 @@ exports.getAllCombinedData = async (req, res) => {
 // --- 5. PREDICT BUSINESS POTENTIAL ---
 exports.predictBusinessPotential = async (req, res) => {
   try {
-    const { latitude, longitude } = req.body;
+    const { 
+      latitude, 
+      longitude, 
+      category, 
+      // Field Restoran Baru:
+      signatureMenu,
+      menuPrice,
+      menuCategory,
+      parkingAreaSize,
+      isNearCampus,
+      isNearOffice,
+      isNearTouristSpot
+    } = req.body;
 
+    // 1. SIMPAN DATA RESTORAN (Jika Kategori Restoran)
+    if (category === 'restoran') {
+      await RestoranData.create({
+        latitude,
+        longitude,
+        userId: req.user ? req.user._id : null, // Optional jika ada auth
+        signatureMenu,
+        menuPrice,
+        menuCategory,
+        parkingAreaSize,
+        isNearCampus: Boolean(isNearCampus),
+        isNearOffice: Boolean(isNearOffice),
+        isNearTouristSpot: Boolean(isNearTouristSpot)
+      });
+    }
+
+    // 2. LOGIKA PREDIKSI LAMA (Cari Marker Terdekat & Hitung Skor)
     const markers = await Marker.find({ isActive: true }).lean();
     if (!markers.length) return handleError(res, { message: 'Not Found' }, 'Belum ada marker tersedia', 404);
 
@@ -201,12 +230,21 @@ exports.predictBusinessPotential = async (req, res) => {
       averageIncome: ecoData?.averageIncome || 0
     };
 
-    const score = calculatePotentialScore(
+    // Tambahan logika skor sederhana untuk restoran (opsional, bisa disesuaikan)
+    let score = calculatePotentialScore(
       data.averageAge, 
       data.averageIncome, 
       data.populationDensity, 
       data.roadAccessibility
     );
+
+    // Bonus skor jika dekat keramaian (khusus restoran)
+    if (category === 'restoran') {
+      if (isNearCampus) score += 5;
+      if (isNearOffice) score += 5;
+      if (isNearTouristSpot) score += 5;
+      score = Math.min(score, 100); // Cap di 100
+    }
 
     let categoryLabel = score >= 75 ? 'Sangat Tinggi' : score >= 60 ? 'Tinggi' : score >= 40 ? 'Sedang' : 'Rendah';
 

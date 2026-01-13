@@ -98,9 +98,10 @@ const MapPage = () => {
   };
 
   const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [name]: type === 'checkbox' ? checked : value
     });
   };
 
@@ -364,6 +365,7 @@ const MapPage = () => {
               <button className="btn-close" onClick={handleClose}>✕</button>
               <h3>Analisis Potensi Bisnis</h3>
               <form onSubmit={handleAnalyzeSubmit}>
+                {/* Field Wajib Dasar */}
                 <div className="form-group">
                   <label>Latitude</label>
                   <input type="number" value={popup.lat} disabled />
@@ -372,6 +374,7 @@ const MapPage = () => {
                   <label>Longitude</label>
                   <input type="number" value={popup.lng} disabled />
                 </div>
+                
                 <div className="form-group">
                   <label>Kategori Bisnis</label>
                   <select
@@ -386,12 +389,93 @@ const MapPage = () => {
                     <option value="laundry">Laundry</option>
                   </select>
                 </div>
-                <div className="form-group">
-                  <label>Harga Produk</label>
-                  <input type="number" name="rating" value={formData.rating} onChange={handleInputChange} required />
-                </div>
+
+                {/* LOGIKA KONDISIONAL: HANYA MUNCUL JIKA KATEGORI RESTORAN */}
+                {formData.category === 'restoran' && (
+                  <div className="extra-fields-section">
+                    <h4>Detail Restoran</h4>
+                    
+                    {/* 1. Menu + Harga (3 Field) */}
+                    <div className="form-group">
+                      <label>Menu Andalan</label>
+                      <input 
+                        type="text" 
+                        name="signatureMenu" 
+                        placeholder="Contoh: Nasi Goreng Spesial" 
+                        onChange={handleInputChange} 
+                        required 
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Harga Menu (Rp)</label>
+                      <input 
+                        type="number" 
+                        name="menuPrice" 
+                        placeholder="Contoh: 25000" 
+                        onChange={handleInputChange} 
+                        required 
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Jenis Menu</label>
+                      <select name="menuCategory" onChange={handleInputChange} required className="custom-select">
+                        <option value="">-- Pilih Jenis --</option>
+                        <option value="makanan_berat">Makanan Berat</option>
+                        <option value="minuman">Minuman</option>
+                        <option value="snack">Cemilan</option>
+                      </select>
+                    </div>
+
+                    {/* 2. Parkir */}
+                    <div className="form-group">
+                      <label>Luas Parkir (m²)</label>
+                      <input 
+                        type="number" 
+                        name="parkingAreaSize" 
+                        placeholder="Contoh: 50" 
+                        onChange={handleInputChange} 
+                        required 
+                      />
+                    </div>
+
+                    {/* 3. Checkbox Kedekatan */}
+                    <div className="form-group">
+                      <label style={{ marginBottom: '8px', display: 'block' }}>Lokasi Strategis:</label>
+                      <div className="checkbox-group" style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', fontWeight: 'normal' }}>
+                          <input 
+                            type="checkbox" 
+                            name="isNearCampus" 
+                            checked={formData.isNearCampus || false} 
+                            onChange={handleInputChange} 
+                            style={{ marginRight: '8px' }}
+                          /> Dekat Kampus
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', fontWeight: 'normal' }}>
+                          <input 
+                            type="checkbox" 
+                            name="isNearOffice" 
+                            checked={formData.isNearOffice || false} 
+                            onChange={handleInputChange} 
+                            style={{ marginRight: '8px' }}
+                          /> Dekat Kantor
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', fontWeight: 'normal' }}>
+                          <input 
+                            type="checkbox" 
+                            name="isNearTouristSpot" 
+                            checked={formData.isNearTouristSpot || false} 
+                            onChange={handleInputChange} 
+                            style={{ marginRight: '8px' }}
+                          /> Dekat Wisata
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <button type="submit" className="btn btn-primary" disabled={loading}>
-                  {loading ? 'Menganalisis...' : 'Analisis'}
+                  {loading ? 'Menganalisis...' : 'Analisis & Simpan'}
                 </button>
               </form>
               {result && (

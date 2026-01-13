@@ -458,8 +458,38 @@
   z-index: 9999;
   min-width: 340px;
   max-width: 95vw;
+  max-height: 85vh; /* Batasi tinggi maksimal 85% dari layar */
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #ffffff transparent;
 }
 
+.checkbox-group label {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+}
+
+.checkbox-group label:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.checkbox-group input[type="checkbox"] {
+  width: auto !important; /* Override width: 100% dari global form */
+  margin-right: 12px;
+}
+
+.extra-fields-section{
+  background: #181e29;
+  color: #fff;
+  border-radius: 16px;
+  max-height: 85vh;
+}
 .popup-card h3 {
   margin-top: 0;
   margin-bottom: 18px;

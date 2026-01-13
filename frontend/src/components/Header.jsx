@@ -6,6 +6,8 @@ import "../styles/Header.css";
 export default function Header() {
     const location = useLocation();
     const isAuthenticated = storage.isAuthenticated();
+    // Tambahan: Cek apakah user adalah admin
+    const isAdmin = storage.isAdmin(); 
     const [isVisible, setIsVisible] = useState(true);
     const [lastScrollY, setLastScrollY] = useState(0);
 
@@ -53,9 +55,13 @@ export default function Header() {
                         <NavLink to="/history" className={({ isActive }) => (isActive ? "isActive" : "")}>
                             Riwayat
                         </NavLink>
-                        <NavLink to="/admin" className={({ isActive }) => (isActive ? "isActive" : "")}>
-                            Admin Panel
-                        </NavLink>
+                        
+                        {/* PERUBAHAN DI SINI: Hanya render jika isAdmin bernilai true */}
+                        {isAdmin && (
+                            <NavLink to="/admin" className={({ isActive }) => (isActive ? "isActive" : "")}>
+                                Admin Panel
+                            </NavLink>
+                        )}
                     </nav>
                 )}
 
