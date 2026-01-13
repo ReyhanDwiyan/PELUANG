@@ -1,43 +1,44 @@
 const express = require('express');
 const router = express.Router();
 const { 
-  createPopulationData, 
-  createRoadAccessibilityData, 
-  createSpatialData,        // Pastikan ini ada
-  updateSpatialData,        // Pastikan ini ada
+  createSpatialData,
+  updateSpatialData,
   getAllCombinedData,
   predictBusinessPotential,
   deleteSpatialData,
-  getUserHistory,
-  getUserHistory    // <--- TAMBAHKAN INI AGAR TIDAK ERROR
+  getUserHistory, // API History Table
+  getUserStats    // API Dashboard Stats
 } = require('../controller/spatialDataController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 
-// Route Gabungan (Dipakai Frontend AdminPage)
-// GET /api/spatial-data
+// =======================================================
+// ROUTE DASHBOARD & HISTORY (User)
+// =======================================================
+// GET /api/spatial-data/stats (Angka Dashboard)
+router.get('/stats', protect, getUserStats);
+
+// GET /api/spatial-data/history (Tabel Riwayat)
+router.get('/history', protect, getUserHistory);
+
+// =======================================================
+// ROUTE DATA SPASIAL (Admin)
+// =======================================================
+// GET /api/spatial-data (List Data Gabungan)
 router.get('/', protect, getAllCombinedData);
 
-router.get('/history', protect, getUserHistory);
-router.get('/stats', protect, getUserStats);     // API untuk Angka Dashboard
-
-// POST /api/spatial-data (Simpan data baru)
+// POST /api/spatial-data (Simpan Data Baru)
 router.post('/', protect, authorize('admin'), createSpatialData);
 
-// PUT /api/spatial-data/:id (Update data existing)
+// PUT /api/spatial-data/:id (Update Data)
 router.put('/:id', protect, authorize('admin'), updateSpatialData);
 
-// DELETE /api/spatial-data/:id (Hapus data)
+// DELETE /api/spatial-data/:id (Hapus Data)
 router.delete('/:id', protect, authorize('admin'), deleteSpatialData);
 
-// Route Terpisah (Legacy/Optional)
-router.post('/population', protect, authorize('admin'), createPopulationData);
-router.post('/road-accessibility', protect, authorize('admin'), createRoadAccessibilityData);
-
-// Route Prediksi
+// =======================================================
+// ROUTE PREDIKSI (User Logic Utama)
+// =======================================================
+// POST /api/spatial-data/predict
 router.post('/predict', protect, predictBusinessPotential);
-
-router.post('/population', protect, authorize('admin'), createPopulationData);
-router.post('/road-accessibility', protect, authorize('admin'), createRoadAccessibilityData);
-
 
 module.exports = router;
