@@ -6,7 +6,6 @@ const analysisHistorySchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
-  // Menyimpan lokasi mana yang dianalisis (mengambil dari lat/long marker terdekat)
   markerId: { 
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Marker',
@@ -17,7 +16,6 @@ const analysisHistorySchema = new mongoose.Schema({
     required: true,
     enum: ['restoran', 'laundry', 'warung']
   },
-  // Referensi ke detail data input user (agar bisa lihat detailnya nanti)
   detailId: { 
     type: mongoose.Schema.Types.ObjectId,
     required: true,
@@ -28,15 +26,26 @@ const analysisHistorySchema = new mongoose.Schema({
     required: true,
     enum: ['RestoranData', 'LaundryData', 'WarungData']
   },
-  // Hasil Skor yang sudah dihitung
   finalScore: {
     type: Number,
     required: true
   },
-  scoreCategory: { // Contoh: 'Sangat Tinggi', 'Rendah'
+  scoreCategory: { 
     type: String,
     required: true
   },
+  
+  // --- KOLOM BARU UNTUK REKOMENDASI ---
+  recommendations: { 
+    type: [String], 
+    default: [] 
+  },
+  breakdown: { 
+    type: Object, 
+    default: {} 
+  },
+  // ------------------------------------
+
   analyzedAt: {
     type: Date,
     default: Date.now
