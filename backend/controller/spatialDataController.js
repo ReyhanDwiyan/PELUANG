@@ -236,9 +236,13 @@ exports.predictBusinessPotential = async (req, res) => {
   }
 };
 
+// ... (Biarkan kode bagian atas Helper & PredictBusinessPotential apa adanya) ...
+
 // ==========================================
 // 2. FUNGSI LAIN (DASHBOARD & ADMIN)
 // ==========================================
+
+// --- A. DASHBOARD STATS (USER) ---
 exports.getUserStats = async (req, res) => {
   try {
     const history = await AnalysisHistory.find({ userId: req.user._id });
@@ -254,6 +258,7 @@ exports.getUserStats = async (req, res) => {
   }
 };
 
+// --- B. RIWAYAT (USER) ---
 exports.getUserHistory = async (req, res) => {
   try {
     const history = await AnalysisHistory.find({ userId: req.user._id })
@@ -265,23 +270,107 @@ exports.getUserHistory = async (req, res) => {
   }
 };
 
+// --- C. ADMIN: GET ALL DATA ---
 exports.getAllCombinedData = async (req, res) => {
-  // Logic ambil data admin (disingkat, gunakan yg lama jika mau, atau pakai placeholder ini)
-  // Agar file ini lengkap, saya sertakan versi ringkasnya:
   try {
-     // ... (Kode sama seperti sebelumnya untuk getAllCombinedData)
-     const populations = await PopulationData.find().populate('markerId').lean();
-     const roads = await RoadAccessibilityData.find().populate('markerId').lean();
-     const economics = await EconomicData.find().populate('markerId').lean();
-     // (Proses merge data sama seperti sebelumnya...)
-     // Agar aman, Anda bisa copy logic getAllCombinedData dari file lama Anda 
-     // atau biarkan saya tulis ulang jika diminta.
-     // Untuk sekarang saya return array kosong agar tidak error saat compile.
-     sendResponse(res, []); 
-  } catch (error) { handleError(res, error, 'Gagal load data'); }
+    const [populations, roads, economics] = await Promise.all([
+      PopulationData.find().populate('markerId').lean(),
+      RoadAccessibilityData.find().populate('markerId').lean(),
+      EconomicData.find().populate('markerId').lean()
+    ]);
+
+    const combinedMap = new Map();
+    const mergeData = (item, type) => {
+      if (!item.markerId) return;
+      const key = item.markerId._id.toString();
+      if (!combinedMap.has(key)) {
+        combinedMap.set(key, {
+          _id: item.markerId._id,
+          markerId: item.markerId,
+          averageAge: 0, populationDensity: 0, 
+          studentPercentage: 0, workerPercentage: 0, familyPercentage: 0,
+          roadAccessibility: 0, averageIncome: 0, averageRentalCost: 0,
+          lastUpdated: item.updatedAt
+        });
+      }
+      const entry = combinedMap.get(key);
+      if (type === 'population') {
+        entry.averageAge = item.averageAge;
+        entry.populationDensity = item.populationDensity;
+        entry.studentPercentage = item.studentPercentage || 0;
+        entry.workerPercentage = item.workerPercentage || 0;
+        entry.familyPercentage = item.familyPercentage || 0;
+      } else if (type === 'road') {
+        entry.roadAccessibility = item.roadAccessibility;
+      } else if (type === 'economic') {
+        entry.averageIncome = item.averageIncome;
+        entry.averageRentalCost = item.averageRentalCost || 0;
+      }
+    };
+
+    populations.forEach(p => mergeData(p, 'population'));
+    roads.forEach(r => mergeData(r, 'road'));
+    economics.forEach(e => mergeData(e, 'economic'));
+
+    sendResponse(res, Array.from(combinedMap.values()));
+  } catch (error) {
+    handleError(res, error, 'Gagal mengambil data gabungan');
+  }
 };
 
-// CRUD Admin (Placeholder agar tidak error import)
-exports.createSpatialData = async (req, res) => { sendResponse(res, {success: true}); };
-exports.updateSpatialData = async (req, res) => { sendResponse(res, {success: true}); };
-exports.deleteSpatialData = async (req, res) => { sendResponse(res, {success: true}); };
+// --- D. ADMIN: CREATE DATA (PERBAIKAN: TAMBAH KURUNG TUTUP) ---
+exports.createSpatialData = async (req, res) => {
+  try {
+    const { 
+      markerId, averageAge, populationDensity, 
+      studentPercentage, workerPercentage, familyPercentage,
+      averageIncome, averageRentalCost, roadAccessibility 
+    } = req.body;
+
+    if (!markerId) return handleError(res, { message: 'Validation Error' }, 'Marker ID wajib diisi', 400);
+
+    // FIX: Tambahkan ')' sebelum titik koma di akhir blok Promise.all
+    await Promise.all([
+      PopulationData.findOneAndUpdate(
+        { markerId },
+        { markerId, averageAge, populationDensity, studentPercentage, workerPercentage, familyPercentage, createdBy: req.user?._id },
+        { upsert: true, new: true }
+      ),
+      EconomicData.findOneAndUpdate(
+        { markerId },
+        { markerId, averageIncome, averageRentalCost, createdBy: req.user?._id },
+        { upsert: true, new: true }
+      ),
+      RoadAccessibilityData.findOneAndUpdate(
+        { markerId },
+        { markerId, roadAccessibility, createdBy: req.user?._id },
+        { upsert: true, new: true }
+      )
+    ]); // <--- SEBELUMNYA SALAH DISINI (];), SEKARANG SUDAH BENAR (]);)
+
+    sendResponse(res, { success: true }, 201, { message: 'Data berhasil disimpan' });
+  } catch (error) {
+    handleError(res, error, 'Gagal menyimpan data');
+  }
+};
+
+// --- E. ADMIN: UPDATE DATA (PERBAIKAN) ---
+exports.updateSpatialData = async (req, res) => {
+  // Logic sama dengan create karena pakai findOneAndUpdate/Upsert
+  exports.createSpatialData(req, res);
+};
+
+// --- F. ADMIN: DELETE DATA (PERBAIKAN) ---
+exports.deleteSpatialData = async (req, res) => {
+  try {
+    const id = req.params.id;
+    await Promise.all([
+        PopulationData.deleteMany({ $or: [{ _id: id }, { markerId: id }] }),
+        RoadAccessibilityData.deleteMany({ $or: [{ _id: id }, { markerId: id }] }),
+        EconomicData.deleteMany({ $or: [{ _id: id }, { markerId: id }] })
+    ]);
+    sendResponse(res, { success: true }, 200, { message: 'Data berhasil dihapus' });
+  } catch (error) {
+    handleError(res, error, 'Gagal menghapus data');
+  }
+};
