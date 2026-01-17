@@ -9,45 +9,89 @@ const AnalysisHistory = require('../models/AnalysisHistory');
 const { handleError, sendResponse } = require('../utils/responseHandler');
 
 // --- KONSTANTA BISNIS ---
-const UMR_BANDUNG = 4200000; // Rp 4.2 Juta
+const UMR_BANDUNG = 4200000;
 const COMPETITOR_RADIUS_METERS = 500;
 
-// --- HELPER 1: HITUNG SKOR DASAR ---
+// --- HELPER 1: HITUNG JARAK (METER) ---
+const calculateDistanceMeters = (lat1, lon1, lat2, lon2) => {
+  const R = 6371e3; // Radius bumi dalam meter
+  const φ1 = lat1 * Math.PI/180;
+  const φ2 = lat2 * Math.PI/180;
+  const Δφ = (lat2-lat1) * Math.PI/180;
+  const Δλ = (lon2-lon1) * Math.PI/180;
+
+  const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+            Math.cos(φ1) * Math.cos(φ2) *
+            Math.sin(Δλ/2) * Math.sin(Δλ/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c; // Hasil dalam meter
+};
+
+// --- HELPER 2: ANALISIS KOMPETITOR (JUMLAH & JARAK TERDEKAT) ---
+// Update: Sekarang mengembalikan object { count, nearestDist }
+const analyzeCompetitors = async (latitude, longitude, category) => {
+  const markers = await Marker.find({ category: category, isActive: true }).lean();
+  
+  let count = 0;
+  let nearestDist = Infinity;
+
+  markers.forEach(m => {
+    const dist = calculateDistanceMeters(latitude, longitude, m.latitude, m.longitude);
+    
+    if (dist <= COMPETITOR_RADIUS_METERS) {
+      count++;
+      // Cari yang paling dekat
+      if (dist < nearestDist) {
+        nearestDist = dist;
+      }
+    }
+  });
+
+  return { count, nearestDist: nearestDist === Infinity ? 0 : nearestDist };
+};
+
+// --- HELPER 3: HITUNG SKOR DASAR ---
 const calculateBaseScore = (popData, ecoData, roadData) => {
   const densityScore = Math.min((popData?.populationDensity || 0) / 10000, 1) * 30; 
   const incomeScore = Math.min((ecoData?.averageIncome || 0) / (UMR_BANDUNG * 3), 1) * 20; 
   const roadScore = ((roadData?.roadAccessibility || 0) / 5) * 10; 
-  return Math.round(densityScore + incomeScore + roadScore);
+  
+  return {
+    total: Math.round(densityScore + incomeScore + roadScore),
+    details: {
+      density: Math.round(densityScore),
+      income: Math.round(incomeScore),
+      road: Math.round(roadScore)
+    }
+  };
 };
 
-// --- HELPER 2: HITUNG KOMPETITOR ---
-const countCompetitors = async (latitude, longitude, category) => {
-  const markers = await Marker.find({ category: category, isActive: true }).lean();
-  let count = 0;
-  markers.forEach(m => {
-    const dist = Math.sqrt(
-      Math.pow(m.latitude - latitude, 2) + 
-      Math.pow(m.longitude - longitude, 2)
-    ) * 111000; 
-    if (dist <= COMPETITOR_RADIUS_METERS) count++;
-  });
-  return count;
-};
-
-// --- HELPER 3: GENERATE REKOMENDASI BISNIS (BARU) ---
-const generateRecommendations = (category, score, popData, ecoData) => {
+// --- HELPER 4: GENERATE REKOMENDASI ---
+const generateRecommendations = (category, score, popData, ecoData, competitorData) => {
   const recs = [];
+  const { nearestDist, count } = competitorData; // Ambil data kompetitor
+  
   const pctStudent = popData?.studentPercentage || 0;
   const pctWorker = popData?.workerPercentage || 0;
   const pctFamily = popData?.familyPercentage || 0;
   const income = ecoData?.averageIncome || 0;
 
-  // Logika Rekomendasi Spesifik
+  // 1. Rekomendasi Berbasis Kompetitor (BARU)
+  if (count > 0) {
+    if (nearestDist < 50) {
+      recs.push(`⚠️ BAHAYA: Ada kompetitor sangat dekat (${Math.round(nearestDist)}m). Anda harus punya diferensiasi kuat (Harga/Promo).`);
+    } else if (nearestDist < 150) {
+      recs.push(`⚠️ Kompetitor dalam jarak pandang (${Math.round(nearestDist)}m). Pastikan signage/plang toko Anda lebih terlihat.`);
+    }
+  } else {
+    recs.push("✅ Area ini masih bersih dari kompetitor langsung dalam radius 500m.");
+  }
+
+  // 2. Rekomendasi Kategori
   if (category === 'restoran') {
     if (pctStudent > 40) recs.push("Pasar Mahasiswa: Buat menu paket hemat (Rp 15-25rb), porsi kenyang, dan WiFi kencang.");
     if (pctWorker > 40) recs.push("Pasar Karyawan: Fokus kecepatan penyajian (Quick Service) untuk jam makan siang.");
     if (pctFamily > 40) recs.push("Pasar Keluarga: Sediakan menu sharing (tengah) dan kursi bayi (High Chair).");
-    if (income > 8000000) recs.push("Daya Beli Tinggi: Anda bisa menjual menu premium/estetik dengan margin lebih besar.");
   } 
   else if (category === 'laundry') {
     if (pctStudent > 50) recs.push("Sangat potensial untuk Laundry Kiloan + Setrika (Mahasiswa malas nyuci).");
@@ -57,23 +101,16 @@ const generateRecommendations = (category, score, popData, ecoData) => {
   else if (category === 'warung') {
     if (pctStudent > 50) recs.push("Wajib stok: Mie instan, Kopi sachet, Rokok eceran, dan Minuman dingin.");
     if (pctFamily > 50) recs.push("Fokus Sembako: Beras, Telur, Minyak Goreng, dan Gas LPG.");
-    if (score < 50) recs.push("Lokasi agak sepi: Pasang spanduk warna mencolok atau lampu terang agar terlihat.");
   }
 
-  // Rekomendasi Umum
-  if (score < 50) {
-    recs.push("⚠️ Hati-hati: Persaingan ketat atau pasar sepi. Siapkan budget promosi ekstra.");
-  } else if (score > 80) {
-    recs.push("🔥 Lokasi Emas: Segera amankan lokasi sebelum diambil kompetitor.");
-  }
-
-  if (recs.length === 0) recs.push("Bisnis standar bisa berjalan, pastikan pelayanan ramah.");
+  if (score < 50) recs.push("⚠️ Hati-hati: Persaingan ketat atau pasar sepi. Siapkan budget promosi ekstra.");
+  else if (score > 80) recs.push("🔥 Lokasi Emas: Segera amankan lokasi sebelum diambil kompetitor.");
 
   return recs;
 };
 
 // ==========================================
-// 1. PREDIKSI POTENSI BISNIS (INTI SISTEM)
+// 1. PREDIKSI POTENSI BISNIS
 // ==========================================
 exports.predictBusinessPotential = async (req, res) => {
   try {
@@ -89,7 +126,7 @@ exports.predictBusinessPotential = async (req, res) => {
     let savedDetail = null;
     let detailModelName = '';
 
-    // A. SIMPAN DATA DETAIL
+    // A. SIMPAN DATA DETAIL (Sama seperti sebelumnya)
     if (category === 'restoran') {
       savedDetail = await RestoranData.create({
         latitude, longitude, userId: req.user?._id,
@@ -120,15 +157,17 @@ exports.predictBusinessPotential = async (req, res) => {
       detailModelName = 'WarungData';
     }
 
-    // B. AMBIL DATA MACRO
+    // B. AMBIL DATA MACRO (Cari marker terdekat untuk data demografi)
     const markers = await Marker.find({ isActive: true }).lean();
     if (!markers.length) return handleError(res, { message: 'Not Found' }, 'Data area belum tersedia', 404);
 
     let nearestMarker = null;
-    let minDist = Infinity;
+    let minMarkerDist = Infinity;
+    
+    // Cari marker referensi terdekat (untuk data base)
     markers.forEach(m => {
-      const dist = Math.sqrt(Math.pow(m.latitude - latitude, 2) + Math.pow(m.longitude - longitude, 2));
-      if (dist < minDist) { minDist = dist; nearestMarker = m; }
+      const dist = calculateDistanceMeters(latitude, longitude, m.latitude, m.longitude);
+      if (dist < minMarkerDist) { minMarkerDist = dist; nearestMarker = m; }
     });
 
     const [popData, roadData, ecoData] = await Promise.all([
@@ -138,57 +177,141 @@ exports.predictBusinessPotential = async (req, res) => {
     ]);
 
     // C. HITUNG SKOR
-    let score = calculateBaseScore(popData, ecoData, roadData);
+    const baseCalc = calculateBaseScore(popData, ecoData, roadData);
+    let score = baseCalc.total;
+    
+    // Inisialisasi Object Breakdown
+    const breakdown = {
+      baseScore: baseCalc.total,
+      adjustments: [],      // Menampung penyesuaian kategori
+      competitorPenalty: 0, // Menampung penalti kompetitor
+      rentAdjustment: 0     // Menampung penalti/bonus sewa
+    };
+
     const avgIncome = ecoData?.averageIncome || 0;
     const rentCost = ecoData?.averageRentalCost || 0;
     const pctStudent = popData?.studentPercentage || 0;
     const pctWorker = popData?.workerPercentage || 0;
+    const pctFamily = popData?.familyPercentage || 0;
 
-    // --- LOGIKA RESTORAN ---
-    if (category === 'restoran') {
+    // --- LOGIKA KATEGORI (Sama seperti sebelumnya) ---
+   if (category === 'restoran') {
       const price = parseFloat(menuPrice) || 0;
-      if (price < 25000 && avgIncome < UMR_BANDUNG) score += 15;
-      else if (price > 50000 && avgIncome > (2.5 * UMR_BANDUNG)) score += 15;
-      else if (price >= 25000 && price <= 50000 && avgIncome >= UMR_BANDUNG) score += 15;
-      else score -= 10;
+      
+      // Cek Kesesuaian Harga vs Income Area
+      if (price < 25000 && avgIncome < UMR_BANDUNG) {
+        score += 15;
+        breakdown.adjustments.push({ label: "Harga Ekonomis di Area Terjangkau", val: 15 });
+      } else if (price > 50000 && avgIncome > (2.5 * UMR_BANDUNG)) {
+        score += 15;
+        breakdown.adjustments.push({ label: "Harga Premium di Area Elite", val: 15 });
+      } else if (price >= 25000 && price <= 50000 && avgIncome >= UMR_BANDUNG) {
+        score += 15;
+        breakdown.adjustments.push({ label: "Harga Standar Sesuai UMR", val: 15 });
+      } else {
+        score -= 10;
+        breakdown.adjustments.push({ label: "Ketidakcocokan Harga vs Daya Beli", val: -10 });
+      }
 
-      if (menuCategory === 'makanan_berat' && pctWorker > 30) score += 15;
-      else if ((menuCategory === 'minuman' || menuCategory === 'snack') && pctStudent > 30) score += 15;
-      else score += 5;
-
-      if (price > 40000) { if (parseFloat(parkingAreaSize) > 50) score += 10; else score -= 15; } 
-      else { score += 5; }
+      // Cek Target Pasar
+      if (menuCategory === 'makanan_berat' && pctWorker > 30) {
+        score += 15;
+        breakdown.adjustments.push({ label: "Cocok untuk Karyawan (Makan Berat)", val: 15 });
+      } else if ((menuCategory === 'minuman' || menuCategory === 'snack') && pctStudent > 30) {
+        score += 15;
+        breakdown.adjustments.push({ label: "Cocok untuk Mahasiswa (Snack/Minum)", val: 15 });
+      } else {
+        score += 5;
+        breakdown.adjustments.push({ label: "Kategori Umum", val: 5 });
+      }
     }
-    // --- LOGIKA LAUNDRY ---
     else if (category === 'laundry') {
-      if (housingTypology === 'Student_Cluster' && pctStudent > 40) score += 20;
-      else if (housingTypology === 'Apartment' && pctWorker > 40) score += 20;
-      else if (housingTypology === 'Family_Cluster') {
-         if (avgIncome > (2 * UMR_BANDUNG)) score += 25; else score -= 10;
-      } else { score += 5; }
-      if (parseInt(waterCostIndex) >= 4) score += 10;
-      if (parseInt(sunlightExposure) >= 4) score += 10;
+      if (housingTypology === 'Student_Cluster' && pctStudent > 40) {
+        score += 20;
+        breakdown.adjustments.push({ label: "Lokasi Kos Mahasiswa (High Demand)", val: 20 });
+      } else if (housingTypology === 'Apartment' && pctWorker > 40) {
+        score += 20;
+        breakdown.adjustments.push({ label: "Lokasi Apartemen Pekerja", val: 20 });
+      } else if (housingTypology === 'Family_Cluster') {
+         if (avgIncome > (2 * UMR_BANDUNG)) {
+            score += 25;
+            breakdown.adjustments.push({ label: "Perumahan Menengah Atas", val: 25 });
+         } else {
+            score -= 10;
+            breakdown.adjustments.push({ label: "Perumahan Biasa (Suka Cuci Sendiri)", val: -10 });
+         }
+      } else {
+        score += 5;
+        breakdown.adjustments.push({ label: "Tipe Hunian Standar", val: 5 });
+      }
+
+      // Bonus Fasilitas
+      if (parseInt(waterCostIndex) >= 4) {
+        score += 10;
+        breakdown.adjustments.push({ label: "Kualitas Air Bagus", val: 10 });
+      }
+      if (parseInt(sunlightExposure) >= 4) {
+        score += 10;
+        breakdown.adjustments.push({ label: "Area Jemur Memadai", val: 10 });
+      }
     }
-    // --- LOGIKA WARUNG ---
     else if (category === 'warung') {
-      if (locationPosition === 'Hook') score += 20;
-      else if (locationPosition === 'T_Junction') score += 15;
-      else if (locationPosition === 'Middle') score += 5;
-      else if (locationPosition === 'Dead_End') score -= 20;
+      // Posisi Bangunan
+      if (locationPosition === 'Hook') { score += 20; breakdown.adjustments.push({ label: "Posisi Hook (Sangat Strategis)", val: 20 }); }
+      else if (locationPosition === 'T_Junction') { score += 15; breakdown.adjustments.push({ label: "Posisi Tusuk Sate", val: 15 }); }
+      else if (locationPosition === 'Middle') { score += 5; breakdown.adjustments.push({ label: "Posisi Tengah Blok", val: 5 }); }
+      else if (locationPosition === 'Dead_End') { score -= 20; breakdown.adjustments.push({ label: "Jalan Buntu", val: -20 }); }
 
+      // Visibilitas
       const vis = parseInt(visibilityScore) || 0;
-      if (vis < 30) score = score * 0.5;
-      else if (vis > 80) score += 10;
-      if (parseFloat(socialHubProximity) < 50) score += 10;
+      if (vis < 30) { 
+        let penalty = Math.round(score * 0.5); // Penalti 50%
+        score -= penalty; 
+        breakdown.adjustments.push({ label: "Visibilitas Buruk (<30%)", val: -penalty });
+      } else if (vis > 80) {
+        score += 10;
+        breakdown.adjustments.push({ label: "Visibilitas Sangat Baik", val: 10 });
+      }
     }
 
-    // D. PENALTI & FINALISASI
-    const competitorCount = await countCompetitors(latitude, longitude, category);
-    if (competitorCount > 5) score -= 20; else if (competitorCount > 2) score -= 10;
+    // D. PENALTI & FINALISASI (UPDATED: LOGIKA SENSITIF JARAK)
+    const competitorData = await analyzeCompetitors(latitude, longitude, category);
+    const { count: competitorCount, nearestDist } = competitorData;
 
-    if (score > 70 && rentCost > (avgIncome * 12)) score -= 5;
-    if (score > 60 && rentCost < (avgIncome * 5)) score += 5;
+    // 1. Penalti Jumlah
+    let qtyPenalty = 0;
+    if (competitorCount > 5) qtyPenalty = -20;
+    else if (competitorCount > 2) qtyPenalty = -10;
+    
+    if(qtyPenalty !== 0) {
+        score += qtyPenalty;
+        breakdown.competitorPenalty += qtyPenalty;
+    }
 
+    // 2. Penalti Jarak (Proximity)
+    let distPenalty = 0;
+    if (competitorCount > 0) {
+        if (nearestDist < 50) distPenalty = -25;
+        else if (nearestDist < 150) distPenalty = -15;
+        else if (nearestDist < 300) distPenalty = -5;
+    }
+
+    if(distPenalty !== 0) {
+        score += distPenalty;
+        breakdown.competitorPenalty += distPenalty;
+    }
+
+    // 3. Penalti/Bonus Biaya Sewa
+    if (score > 70 && rentCost > (avgIncome * 12)) {
+        score -= 5;
+        breakdown.rentAdjustment = -5;
+    }
+    if (score > 60 && rentCost < (avgIncome * 5)) {
+        score += 5;
+        breakdown.rentAdjustment = 5;
+    }
+
+    // Limit skor 0-100
     score = Math.round(Math.max(0, Math.min(score, 100)));
     
     let categoryLabel = 'Rendah';
@@ -196,17 +319,10 @@ exports.predictBusinessPotential = async (req, res) => {
     else if (score >= 60) categoryLabel = 'Tinggi';
     else if (score >= 40) categoryLabel = 'Sedang';
 
-    // --- FITUR BARU: GENERATE REKOMENDASI ---
-    const recommendations = generateRecommendations(category, score, popData, ecoData);
-    
-    const breakdown = {
-        baseScore: Math.round(calculateBaseScore(popData, ecoData, roadData)),
-        competitorPenalty: competitorCount > 5 ? -20 : competitorCount > 2 ? -10 : 0,
-        demographicFit: (score > 60) ? "Cocok" : "Kurang Cocok",
-        locationQuality: (category === 'warung' && locationPosition === 'Hook') ? "Sangat Strategis" : "Standar"
-    };
+    // --- GENERATE REKOMENDASI (UPDATED) ---
+    const recommendations = generateRecommendations(category, score, popData, ecoData, competitorData);
 
-    // E. SIMPAN HISTORY (DENGAN REKOMENDASI)
+    // E. SIMPAN HISTORY
     await AnalysisHistory.create({
       userId: req.user?._id,
       markerId: nearestMarker?._id,
@@ -215,16 +331,18 @@ exports.predictBusinessPotential = async (req, res) => {
       detailModel: detailModelName,
       finalScore: score,
       scoreCategory: categoryLabel,
-      recommendations: recommendations, 
-      breakdown: breakdown
+      recommendations: recommendations,
+      breakdown: breakdown // Simpan struktur breakdown lengkap
     });
 
     sendResponse(res, {
       score,
       category: categoryLabel,
+      breakdown, // <--- KIRIM OBJECT INI
       nearestLocation: nearestMarker?.title,
       competitorsFound: competitorCount,
-      recommendations, // Kirim ke frontend agar langsung muncul
+      nearestCompetitorDistance: Math.round(nearestDist),
+      recommendations, 
       detail: {
         avgIncome,
         populationDensity: popData?.populationDensity
@@ -235,8 +353,6 @@ exports.predictBusinessPotential = async (req, res) => {
     handleError(res, error, 'Gagal melakukan prediksi');
   }
 };
-
-// ... (Biarkan kode bagian atas Helper & PredictBusinessPotential apa adanya) ...
 
 // ==========================================
 // 2. FUNGSI LAIN (DASHBOARD & ADMIN)
@@ -318,7 +434,7 @@ exports.getAllCombinedData = async (req, res) => {
   }
 };
 
-// --- D. ADMIN: CREATE DATA (PERBAIKAN: TAMBAH KURUNG TUTUP) ---
+// --- D. ADMIN: CREATE DATA ---
 exports.createSpatialData = async (req, res) => {
   try {
     const { 
@@ -329,7 +445,6 @@ exports.createSpatialData = async (req, res) => {
 
     if (!markerId) return handleError(res, { message: 'Validation Error' }, 'Marker ID wajib diisi', 400);
 
-    // FIX: Tambahkan ')' sebelum titik koma di akhir blok Promise.all
     await Promise.all([
       PopulationData.findOneAndUpdate(
         { markerId },
@@ -346,7 +461,7 @@ exports.createSpatialData = async (req, res) => {
         { markerId, roadAccessibility, createdBy: req.user?._id },
         { upsert: true, new: true }
       )
-    ]); // <--- SEBELUMNYA SALAH DISINI (];), SEKARANG SUDAH BENAR (]);)
+    ]); 
 
     sendResponse(res, { success: true }, 201, { message: 'Data berhasil disimpan' });
   } catch (error) {
@@ -354,13 +469,12 @@ exports.createSpatialData = async (req, res) => {
   }
 };
 
-// --- E. ADMIN: UPDATE DATA (PERBAIKAN) ---
+// --- E. ADMIN: UPDATE DATA ---
 exports.updateSpatialData = async (req, res) => {
-  // Logic sama dengan create karena pakai findOneAndUpdate/Upsert
   exports.createSpatialData(req, res);
 };
 
-// --- F. ADMIN: DELETE DATA (PERBAIKAN) ---
+// --- F. ADMIN: DELETE DATA ---
 exports.deleteSpatialData = async (req, res) => {
   try {
     const id = req.params.id;

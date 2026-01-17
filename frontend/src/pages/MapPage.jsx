@@ -58,7 +58,7 @@ const MapPage = () => {
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState(null);
-  
+
   // STATE UTAMA
   const [formData, setFormData] = useState({
     title: '',
@@ -67,7 +67,7 @@ const MapPage = () => {
     address: '',
     rating: 0
   });
-  
+
   const [popup, setPopup] = useState({ show: false, lat: null, lng: null });
   const [result, setResult] = useState(null);
 
@@ -107,7 +107,7 @@ const MapPage = () => {
   const handleMapClick = (latlng) => {
     resetForm(); // Reset saat klik peta
     setSelectedLocation(latlng);
-    
+
     if (isAdmin) setShowAddForm(true);
     // Untuk user biasa, hanya tampilkan popup analisis potensi
     if (!isAdmin) setPopup({ show: true, lat: latlng.lat, lng: latlng.lng });
@@ -183,11 +183,17 @@ const MapPage = () => {
         ...formData
       });
       setResult(res.data);
+
+      // --- TAMBAHKAN BAGIAN INI ---
+      if (res.data.success) {
+        setPopup({ show: false, lat: null, lng: null });
+      }
+      // ----------------------------
+
     } catch (err) {
       setResult({ success: false, message: err.response?.data?.message || 'Gagal prediksi' });
     }
   };
-
   // Center: Kampus ULBI Bandung
   const ulbiCenter = [-6.8755, 107.5772];
 
@@ -536,15 +542,93 @@ const MapPage = () => {
                   {loading ? 'Menganalisis...' : 'Analisis & Simpan'}
                 </button>
               </form>
-              {result && (
-                <div style={{ marginTop: 16 }}>
-                  {result.success
-                    ? <div>
-                      <h4>Skor Potensi: {result.score} ({result.category})</h4>
-                      <pre>{JSON.stringify(result.detail, null, 2)}</pre>
+              {result && result.success && !popup.show && (
+                <div className="popup-card" style={{ zIndex: 2000, maxWidth: '400px' }}>
+                  <div className="form-header">
+                    <h3>Hasil Analisis</h3>
+                    <button className="btn-close" onClick={() => setResult(null)}>✕</button>
+                  </div>
+
+                  {/* Skor Utama */}
+                  <div style={{ textAlign: 'center', marginBottom: 20, borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: 15 }}>
+                    <div style={{ fontSize: '42px', fontWeight: '800', color: result.score >= 60 ? '#10b981' : result.score >= 40 ? '#f59e0b' : '#ef4444' }}>
+                      {result.score}%
                     </div>
-                    : <div style={{ color: 'red' }}>{result.message}</div>
-                  }
+                    <div className="potential-badge" style={{ backgroundColor: result.score >= 60 ? '#10b981' : result.score >= 40 ? '#f59e0b' : '#ef4444' }}>
+                      {result.category}
+                    </div>
+                  </div>
+
+                  {/* --- NEW: DETAIL PERHITUNGAN (BREAKDOWN) --- */}
+                  {result.breakdown && (
+                    <div style={{ marginBottom: 20, fontSize: '13px', color: '#d1d5db' }}>
+                      <h4 style={{ color: '#e5e7eb', marginBottom: 10, fontSize: '14px' }}>Rincian Nilai:</h4>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <span>Skor Dasar Wilayah</span>
+                        <span style={{ fontWeight: 'bold' }}>{result.breakdown.baseScore}</span>
+                      </div>
+
+                      {/* Loop Adjustments (Kategori) */}
+                      {result.breakdown.adjustments.map((adj, idx) => (
+                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                          <span>{adj.label}</span>
+                          <span style={{ color: adj.val > 0 ? '#10b981' : '#ef4444', fontWeight: 'bold' }}>
+                            {adj.val > 0 ? `+${adj.val}` : adj.val}
+                          </span>
+                        </div>
+                      ))}
+
+                      {/* Penalti Kompetitor */}
+                      {result.breakdown.competitorPenalty !== 0 && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                          <span>Faktor Kompetisi</span>
+                          <span style={{ color: '#ef4444', fontWeight: 'bold' }}>
+                            {result.breakdown.competitorPenalty}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Penyesuaian Sewa */}
+                      {result.breakdown.rentAdjustment !== 0 && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                          <span>Efisiensi Biaya Sewa</span>
+                          <span style={{ color: result.breakdown.rentAdjustment > 0 ? '#10b981' : '#ef4444', fontWeight: 'bold' }}>
+                            {result.breakdown.rentAdjustment > 0 ? `+${result.breakdown.rentAdjustment}` : result.breakdown.rentAdjustment}
+                          </span>
+                        </div>
+                      )}
+
+                      <div style={{ borderTop: '1px solid #4b5563', marginTop: 8, paddingTop: 8, display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', color: '#fff' }}>
+                        <span>TOTAL SKOR</span>
+                        <span>{result.score}</span>
+                      </div>
+                    </div>
+                  )}
+                  {/* ------------------------------------------- */}
+
+                  <div style={{ background: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '8px', marginBottom: '15px' }}>
+                    <h4 style={{ margin: '0 0 10px 0', color: '#36d6ff', fontSize: '14px' }}>Rekomendasi Cerdas:</h4>
+                    {result.recommendations && result.recommendations.length > 0 ? (
+                      <ul style={{ paddingLeft: '20px', margin: 0, color: '#d1d5db', fontSize: '13px', lineHeight: '1.5' }}>
+                        {result.recommendations.map((rec, i) => (
+                          <li key={i} style={{ marginBottom: '6px' }}>{rec}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p style={{ fontSize: '13px', color: '#9ca3af' }}>Tidak ada rekomendasi khusus.</p>
+                    )}
+                  </div>
+
+                  {/* Info Tambahan */}
+                  <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '20px' }}>
+                    {result.competitorsFound !== undefined && (
+                      <p>🏢 Kompetitor: {result.competitorsFound} (Jarak terdekat: {result.nearestCompetitorDistance}m)</p>
+                    )}
+                  </div>
+
+                  <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => setResult(null)}>
+                    Tutup
+                  </button>
                 </div>
               )}
             </div>
