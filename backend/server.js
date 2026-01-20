@@ -4,12 +4,41 @@ const bodyParser = require('body-parser');
 const morgan = require('morgan');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
-const connectDB = require('./config/database');
+const mongoose = require('mongoose');
 const path = require('path');
 const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// MongoDB Connection dengan Cache untuk Serverless
+let cachedDb = null;
+
+const connectDB = async () => {
+  if (cachedDb) {
+    console.log('✅ Using cached MongoDB connection');
+    return cachedDb;
+  }
+
+  try {
+    const connection = await mongoose.connect(process.env.MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000
+    });
+    
+    cachedDb = connection;
+    console.log('✅ MongoDB Connected (New Connection)');
+    return connection;
+  } catch (error) {
+    console.error('❌ MongoDB Connection Error:', error);
+    throw error;
+  }
+};
+
+// Connect to DB on startup
+connectDB();
 
 // CORS Configuration
 app.use(cors({
@@ -50,25 +79,45 @@ app.use('/api/spatial-data', require('./routes/spatialDataRoutes'));
 // Health check
 app.get('/', (req, res) => {
   res.json({ 
-    message: 'API Server Running',
+    message: 'Peluang API is running',
     status: 'OK',
     timestamp: new Date().toISOString()
   });
 });
 
-// Error Handler (Pastikan file ini ada di folder middleware)
-app.use(require('./middleware/errorHandler'));
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'OK',
+    database: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected',
+    timestamp: new Date().toISOString()
+  });
+});
 
-// --- LOGIC STARTUP ---
+// 404 Handler
+app.use((req, res) => {
+  res.status(404).json({ 
+    success: false,
+    message: 'Route not found' 
+  });
+});
+
+// Error Handler
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(err.status || 500).json({ 
+    success: false,
+    message: process.env.NODE_ENV === 'production' 
+      ? 'Internal Server Error' 
+      : err.message 
+  });
+});
+
+// Export untuk Vercel (PENTING!)
+module.exports = app;
+
+// Local Development Server
 if (process.env.NODE_ENV !== 'production') {
-  connectDB().then(() => {
-    app.listen(PORT, () => {
-      console.log(`Server running on http://localhost:${PORT}`);
-    });
-  }).catch(err => {
-    console.error('Gagal connect database, server batal jalan:', err);
-    process.exit(1);
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
   });
 }
-
-module.exports = app;

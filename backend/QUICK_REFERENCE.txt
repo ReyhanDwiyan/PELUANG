@@ -1,0 +1,44 @@
+┌─────────────────────────────────────────────────────────────┐
+│  🚀 VERCEL DEPLOYMENT - QUICK REFERENCE                     │
+└─────────────────────────────────────────────────────────────┘
+
+📦 ENVIRONMENT VARIABLES (SET DI VERCEL):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NODE_ENV=production
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/peluang
+JWT_SECRET=your-super-secret-key-min-32-characters
+JWT_EXPIRE=7d
+FRONTEND_URL=https://your-frontend.vercel.app
+SESSION_SECRET=your-session-secret-key
+
+🔧 VERCEL SETTINGS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Framework Preset: Other
+Root Directory: backend (atau . jika sudah di root)
+Build Command: (kosongkan)
+Output Directory: .
+Install Command: npm install
+Node.js Version: 18.x
+
+🧪 TEST ENDPOINTS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+GET  /              → API info
+GET  /health        → Health check + DB status
+POST /api/auth/...  → Authentication routes
+GET  /api/markers   → Marker routes
+POST /api/spatial-data → Spatial analysis
+
+📝 COMMIT COMMANDS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+git add .
+git commit -m "Setup backend for Vercel deployment"
+git push origin main
+
+🐛 TROUBLESHOOTING:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+❌ MongoDB Timeout     → Whitelist 0.0.0.0/0 di Atlas
+❌ CORS Error          → Check FRONTEND_URL env var
+❌ Module Not Found    → npm install semua dependencies
+❌ 404 di Routes       → Check vercel.json routing
+
+✅ DEPLOYMENT READY!
