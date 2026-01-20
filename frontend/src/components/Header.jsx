@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { storage } from "../utils/auth";
 import "../styles/Header.css";
 
 export default function Header() {
+    const location = useLocation();
     const isAuthenticated = storage.isAuthenticated();
     // Tambahan: Cek apakah user adalah admin
-    const isAdmin = storage.isAdmin();
+    const isAdmin = storage.isAdmin(); 
     const [isVisible, setIsVisible] = useState(true);
     const [lastScrollY, setLastScrollY] = useState(0);
 
@@ -39,11 +40,6 @@ export default function Header() {
         <header className={`topnav ${isVisible ? 'topnav--visible' : 'topnav--hidden'}`}>
             <div className="topnav__inner">
                 <NavLink to={isAuthenticated ? "/dashboard" : "/"} className="topnav__brand">
-                    <img
-                        src="/images/logo-peluang.png"
-                        alt="Peluang Logo"
-                        className="topnav__logo"
-                    />
                     <span className="topnav__name">Peluang</span>
                 </NavLink>
 
@@ -58,7 +54,7 @@ export default function Header() {
                         <NavLink to="/history" className={({ isActive }) => (isActive ? "isActive" : "")}>
                             Riwayat
                         </NavLink>
-
+                        
                         {/* PERUBAHAN DI SINI: Hanya render jika isAdmin bernilai true */}
                         {isAdmin && (
                             <NavLink to="/admin" className={({ isActive }) => (isActive ? "isActive" : "")}>
