@@ -22,8 +22,6 @@ const connectDB = async () => {
 
   try {
     const connection = await mongoose.connect(process.env.MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000
     });
@@ -57,13 +55,15 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 
-// Create uploads directory if it doesn't exist
-const uploadDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir);
+// Uploads directory - Hanya untuk development (Vercel serverless adalah read-only)
+if (process.env.NODE_ENV !== 'production') {
+  const uploadDir = path.join(__dirname, 'uploads');
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
+  // Serve static files dari uploads directory (hanya dev)
+  app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 }
-// Serve static files from uploads directory
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // --- ROUTES (HANYA YANG DIPAKAI) ---
 app.use('/api/auth', require('./routes/authRoutes'));
