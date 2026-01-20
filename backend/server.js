@@ -25,7 +25,7 @@ const connectDB = async () => {
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000
     });
-    
+
     cachedDb = connection;
     console.log('✅ MongoDB Connected (New Connection)');
     return connection;
@@ -40,7 +40,7 @@ connectDB();
 
 // CORS Configuration
 app.use(cors({
-  origin: function(origin, callback) {
+  origin: function (origin, callback) {
     if (!origin) return callback(null, true);
     callback(null, true);
   },
@@ -78,7 +78,7 @@ app.use('/api/spatial-data', require('./routes/spatialDataRoutes'));
 
 // Health check
 app.get('/', (req, res) => {
-  res.json({ 
+  res.json({
     message: 'Peluang API is running',
     status: 'OK',
     timestamp: new Date().toISOString()
@@ -86,7 +86,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/health', (req, res) => {
-  res.json({ 
+  res.json({
     status: 'OK',
     database: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected',
     timestamp: new Date().toISOString()
@@ -95,20 +95,20 @@ app.get('/health', (req, res) => {
 
 // 404 Handler
 app.use((req, res) => {
-  res.status(404).json({ 
+  res.status(404).json({
     success: false,
-    message: 'Route not found' 
+    message: 'Route not found'
   });
 });
 
 // Error Handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(err.status || 500).json({ 
+  res.status(err.status || 500).json({
     success: false,
-    message: process.env.NODE_ENV === 'production' 
-      ? 'Internal Server Error' 
-      : err.message 
+    message: process.env.NODE_ENV === 'production'
+      ? 'Internal Server Error'
+      : err.message
   });
 });
 
