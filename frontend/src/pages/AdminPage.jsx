@@ -25,8 +25,6 @@ const AdminPage = () => {
         averageRentalCost: '',
         roadAccessibility: '3'
     });
-    
-    const [breakdownData, setBreakdownData] = useState(null);
 
     useEffect(() => {
         if (!requireAdmin(navigate)) return;
