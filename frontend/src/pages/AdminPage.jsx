@@ -12,7 +12,7 @@ const AdminPage = () => {
     const [loading, setLoading] = useState(true);
     const [showAddForm, setShowAddForm] = useState(false);
     const [editingData, setEditingData] = useState(null);
-    
+
     // STATE FORM DATA (Disesuaikan dengan Backend Baru)
     const [formData, setFormData] = useState({
         markerId: '',
@@ -263,20 +263,20 @@ const AdminPage = () => {
                                     {spatialData.map((data) => (
                                         <tr key={data._id}>
                                             <td>
-                                                <strong>{data.markerId?.title || 'Unknown'}</strong><br/>
+                                                <strong>{data.markerId?.title || 'Unknown'}</strong><br />
                                                 <small>{data.markerId?.category}</small>
                                             </td>
-                                            <td>{data.populationDensity.toLocaleString()} jiwa/km²<br/><small>Umur: {data.averageAge} thn</small></td>
+                                            <td>{data.populationDensity.toLocaleString()} jiwa/km²<br /><small>Umur: {data.averageAge} thn</small></td>
                                             <td>
                                                 <small>
-                                                    🎓 Mhs: {data.studentPercentage}%<br/>
-                                                    💼 Krj: {data.workerPercentage}%<br/>
+                                                    🎓 Mhs: {data.studentPercentage}%<br />
+                                                    💼 Krj: {data.workerPercentage}%<br />
                                                     🏠 Kel: {data.familyPercentage}%
                                                 </small>
                                             </td>
                                             <td>
-                                                <span style={{color: 'green'}}>{formatCurrency(data.averageIncome)}</span><br/>
-                                                <small style={{color: 'red'}}>Sewa: {formatCurrency(data.averageRentalCost)}/thn</small>
+                                                <span style={{ color: 'green' }}>{formatCurrency(data.averageIncome)}</span><br />
+                                                <small style={{ color: 'red' }}>Sewa: {formatCurrency(data.averageRentalCost)}/thn</small>
                                             </td>
                                             <td>{'⭐'.repeat(data.roadAccessibility)}</td>
                                             <td>
