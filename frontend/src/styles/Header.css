@@ -30,23 +30,16 @@
 .topnav__brand {
     display: inline-flex;
     align-items: center;
-    gap: 12px;
+    gap: 1px;
     text-decoration: none;
 }
 
-.topnav__mark {
-    width: 28px;
-    height: 28px;
-    border-radius: 10px;
-    background: linear-gradient(135deg, #6d5efc, #36d6ff);
-    box-shadow: 0 12px 28px rgba(54, 214, 255, .15);
-}
-
 .topnav__name {
-    font-size: 34px;
+    font-size: 25px;
     font-weight: 800;
     letter-spacing: .5px;
     color: #ffffff;
+    margin-left: -2px;
 }
 
 .topnav__links {
@@ -137,5 +130,25 @@
         overflow-x: auto;
         white-space: nowrap;
         gap: 10px;
+    }
+}
+
+.topnav__logo {
+    width: 65px;
+    height: 65px;
+    object-fit: contain;
+}
+.topnav__logo:hover {
+    transform: scale(1.05);
+    opacity: 0.9;
+}
+@media (max-width: 992px) {
+    .topnav__logo {
+        height: 38px;
+    }
+}
+@media (max-width: 768px) {
+    .topnav__logo {
+        height: 32px;
     }
 }

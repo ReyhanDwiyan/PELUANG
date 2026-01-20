@@ -35,7 +35,6 @@ const analysisHistorySchema = new mongoose.Schema({
     required: true
   },
   
-  // --- KOLOM BARU UNTUK REKOMENDASI ---
   recommendations: { 
     type: [String], 
     default: [] 
@@ -44,7 +43,14 @@ const analysisHistorySchema = new mongoose.Schema({
     type: Object, 
     default: {} 
   },
-  // ------------------------------------
+
+  bestAlternative: {
+    category: { type: String, enum: ['restoran', 'laundry', 'warung'] },
+    finalScore: { type: Number },
+    scoreCategory: { type: String },
+    breakdown: { type: Object, default: {} },
+    assumptions: { type: [String], default: [] } // Asumsi yang digunakan
+  },
 
   analyzedAt: {
     type: Date,

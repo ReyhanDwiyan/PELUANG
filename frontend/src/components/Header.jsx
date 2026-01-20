@@ -40,7 +40,11 @@ export default function Header() {
         <header className={`topnav ${isVisible ? 'topnav--visible' : 'topnav--hidden'}`}>
             <div className="topnav__inner">
                 <NavLink to={isAuthenticated ? "/dashboard" : "/"} className="topnav__brand">
-                    <span className="topnav__mark" />
+                    <img 
+                        src="/images/logo-peluang.png" 
+                        alt="Peluang Logo" 
+                        className="topnav__logo"
+                    />
                     <span className="topnav__name">Peluang</span>
                 </NavLink>
 

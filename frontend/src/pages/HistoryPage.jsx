@@ -117,7 +117,7 @@ const HistoryPage = () => {
                             {/* 1. DATA MENTAH LOKASI */}
                             {selectedItem.breakdown?.rawData && (
                                 <div style={{ marginBottom: 20, padding: 15, backgroundColor: '#1a1a2e', borderRadius: 8 }}>
-                                    <h4 style={{ color: '#667eea', marginBottom: 10 }}>📍 Data Lokasi</h4>
+                                    <h4 style={{ color: '#667eea', marginBottom: 10 }}>Data Lokasi</h4>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: '14px' }}>
                                         <div>
                                             <span style={{ color: '#888' }}>Kepadatan Penduduk:</span>
@@ -142,7 +142,7 @@ const HistoryPage = () => {
                             {/* 2. DEMOGRAFI PENDUDUK */}
                             {selectedItem.breakdown?.rawData && (
                                 <div style={{ marginBottom: 20, padding: 15, backgroundColor: '#1a1a2e', borderRadius: 8 }}>
-                                    <h4 style={{ color: '#f59e0b', marginBottom: 10 }}>👥 Demografi Penduduk</h4>
+                                    <h4 style={{ color: '#f59e0b', marginBottom: 10 }}>Demografi Penduduk</h4>
                                     <div style={{ display: 'flex', justifyContent: 'space-around', textAlign: 'center' }}>
                                         <div>
                                             <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#3b82f6' }}>
@@ -200,7 +200,7 @@ const HistoryPage = () => {
                                     <ul style={{ color: '#ccc', lineHeight: '1.8', fontSize: '14px' }}>
                                         {selectedItem.breakdown.adjustments.map((adj, i) => (
                                             <li key={i} style={{ color: adj.val > 0 ? '#10b981' : '#ef4444' }}>
-                                                {adj.val > 0 ? '✅' : '⚠️'} {adj.label}:
+                                                {adj.val > 0 ? '' : ''} {adj.label}:
                                                 <strong> {adj.val > 0 ? '+' : ''}{adj.val} poin</strong>
                                             </li>
                                         ))}
@@ -226,7 +226,7 @@ const HistoryPage = () => {
                                     )}
                                     {selectedItem.breakdown?.competitorPenalty !== 0 && (
                                         <li style={{ color: '#ef4444' }}>
-                                            ⚠️ Total Penalti Kompetitor:
+                                            Total Penalti Kompetitor:
                                             <strong> {selectedItem.breakdown.competitorPenalty} poin</strong>
                                         </li>
                                     )}
@@ -240,7 +240,7 @@ const HistoryPage = () => {
                                         Penyesuaian Biaya Sewa
                                     </h4>
                                     <p style={{ color: selectedItem.breakdown.rentAdjustment > 0 ? '#10b981' : '#ef4444' }}>
-                                        {selectedItem.breakdown.rentAdjustment > 0 ? '✅' : '⚠️'}
+                                        {selectedItem.breakdown.rentAdjustment > 0 ? '' : ''}
                                         {' '}{selectedItem.breakdown.rentAdjustment > 0 ? '+' : ''}{selectedItem.breakdown.rentAdjustment} poin
                                         <br />
                                         <small style={{ color: '#888' }}>
@@ -249,6 +249,139 @@ const HistoryPage = () => {
                                                 : 'Biaya sewa tinggi, margin keuntungan bisa tertekan'}
                                         </small>
                                     </p>
+                                </div>
+                            )}
+
+                            {selectedItem.bestAlternative && (
+                                <div style={{
+                                    marginBottom: 20,
+                                    padding: 20,
+                                    backgroundColor: '#1a1a2e',
+                                    borderRadius: 10,
+                                    border: '2px solid #667eea',
+                                    boxShadow: '0 4px 6px rgba(102, 126, 234, 0.3)'
+                                }}>
+                                    <h4 style={{ color: '#667eea', marginBottom: 15, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        Perbandingan: Bisnis Alternatif Terbaik
+                                    </h4>
+
+                                    <div style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: '1fr 1fr',
+                                        gap: 15,
+                                        marginBottom: 15
+                                    }}>
+                                        {/* Analisis User */}
+                                        <div style={{
+                                            padding: 15,
+                                            backgroundColor: '#16213e',
+                                            borderRadius: 8,
+                                            borderLeft: `4px solid ${getScoreColor(selectedItem.finalScore)}`
+                                        }}>
+                                            <div style={{ fontSize: '12px', color: '#888', marginBottom: 5 }}>Pilihan Anda:</div>
+                                            <div style={{ fontSize: '18px', fontWeight: 'bold', textTransform: 'uppercase', color: '#fff', marginBottom: 8 }}>
+                                                {selectedItem.category}
+                                            </div>
+                                            <div style={{ fontSize: '32px', fontWeight: '800', color: getScoreColor(selectedItem.finalScore) }}>
+                                                {selectedItem.finalScore}%
+                                            </div>
+                                            <div style={{ fontSize: '11px', color: '#888', marginTop: 5 }}>
+                                                {selectedItem.scoreCategory}
+                                            </div>
+                                        </div>
+
+                                        {/* Alternatif Terbaik */}
+                                        <div style={{
+                                            padding: 15,
+                                            backgroundColor: '#16213e',
+                                            borderRadius: 8,
+                                            borderLeft: `4px solid ${getScoreColor(selectedItem.bestAlternative.finalScore)}`,
+                                            position: 'relative'
+                                        }}>
+                                            {selectedItem.bestAlternative.finalScore > selectedItem.finalScore && (
+                                                <div style={{
+                                                    position: 'absolute',
+                                                    top: -10,
+                                                    right: 10,
+                                                    backgroundColor: '#10b981',
+                                                    color: '#fff',
+                                                    padding: '4px 8px',
+                                                    borderRadius: 4,
+                                                    fontSize: '10px',
+                                                    fontWeight: 'bold'
+                                                }}>
+                                                    LEBIH POTENSIAL
+                                                </div>
+                                            )}
+                                            <div style={{ fontSize: '12px', color: '#888', marginBottom: 5 }}>Alternatif Terbaik:</div>
+                                            <div style={{ fontSize: '18px', fontWeight: 'bold', textTransform: 'uppercase', color: '#fff', marginBottom: 8 }}>
+                                                {selectedItem.bestAlternative.category}
+                                            </div>
+                                            <div style={{ fontSize: '32px', fontWeight: '800', color: getScoreColor(selectedItem.bestAlternative.finalScore) }}>
+                                                {selectedItem.bestAlternative.finalScore}%
+                                            </div>
+                                            <div style={{ fontSize: '11px', color: '#888', marginTop: 5 }}>
+                                                {selectedItem.bestAlternative.scoreCategory}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Selisih Skor */}
+                                    <div style={{
+                                        padding: 12,
+                                        backgroundColor: '#0f1729',
+                                        borderRadius: 6,
+                                        marginBottom: 15,
+                                        textAlign: 'center'
+                                    }}>
+                                        <div style={{ fontSize: '13px', color: '#888', marginBottom: 5 }}>Selisih Skor:</div>
+                                        <div style={{
+                                            fontSize: '24px',
+                                            fontWeight: 'bold',
+                                            color: selectedItem.bestAlternative.finalScore > selectedItem.finalScore ? '#10b981' :
+                                                selectedItem.bestAlternative.finalScore < selectedItem.finalScore ? '#ef4444' : '#f59e0b'
+                                        }}>
+                                            {selectedItem.bestAlternative.finalScore > selectedItem.finalScore ? '+' : ''}
+                                            {selectedItem.bestAlternative.finalScore - selectedItem.finalScore} poin
+                                        </div>
+                                    </div>
+
+                                    {/* Asumsi yang Digunakan */}
+                                    {selectedItem.bestAlternative.assumptions && selectedItem.bestAlternative.assumptions.length > 0 && (
+                                        <div style={{
+                                            padding: 12,
+                                            backgroundColor: '#0f1729',
+                                            borderRadius: 6,
+                                            marginBottom: 10
+                                        }}>
+                                            <div style={{ fontSize: '12px', color: '#f59e0b', fontWeight: 'bold', marginBottom: 8 }}>
+                                                Asumsi Kondisi Optimal ({selectedItem.bestAlternative.category.toUpperCase()}):
+                                            </div>
+                                            <ul style={{
+                                                margin: 0,
+                                                paddingLeft: 20,
+                                                fontSize: '12px',
+                                                color: '#ccc',
+                                                lineHeight: '1.6'
+                                            }}>
+                                                {selectedItem.bestAlternative.assumptions.map((assumption, idx) => (
+                                                    <li key={idx}>{assumption}</li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
+
+                                    {/* Catatan */}
+                                    <div style={{
+                                        fontSize: '11px',
+                                        color: '#888',
+                                        fontStyle: 'italic',
+                                        borderTop: '1px solid #2a2a3e',
+                                        paddingTop: 10,
+                                        marginTop: 10
+                                    }}>
+                                        <strong style={{ color: '#667eea' }}>Catatan:</strong> Skor alternatif dihitung menggunakan data lokasi yang sama dengan asumsi kondisi bisnis yang optimal. Hasil aktual dapat bervariasi tergantung implementasi riil.
+                                    </div>
                                 </div>
                             )}
 
