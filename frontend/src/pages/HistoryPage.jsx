@@ -133,7 +133,7 @@ const HistoryPage = () => {
                                         </div>
                                         <div>
                                             <span style={{ color: '#888' }}>Biaya Sewa Rata-rata:</span>
-                                            <br /><strong>Rp {selectedItem.breakdown.rawData.averageRentalCost?.toLocaleString() || '-'}/bulan</strong>
+                                            <br /><strong>Rp {selectedItem.breakdown.rawData.averageRentalCost?.toLocaleString() || '-'}/tahun</strong>
                                         </div>
                                     </div>
                                 </div>
