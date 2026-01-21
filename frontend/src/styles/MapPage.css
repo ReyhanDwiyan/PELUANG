@@ -2,6 +2,23 @@
 
 .map-container {
   min-height: 100vh;
+  background: #ffffff;
+  position: relative;
+}
+
+.map-container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(600px 300px at 20% 10%,
+      rgba(0, 168, 150, .10),
+      transparent 60%),
+    radial-gradient(500px 280px at 80% 20%,
+      rgba(2, 62, 138, .12),
+      transparent 60%);
+  pointer-events: none;
+  z-index: 0;
 }
 
 /* 1. LAYOUT UTAMA */
@@ -42,11 +59,13 @@
   border: none !important;
   box-shadow: var(--shadow-sm) !important;
 }
+
 .leaflet-control-zoom a {
   background: white !important;
   color: var(--text-main) !important;
   border-bottom: 1px solid var(--border-color) !important;
 }
+
 .leaflet-control-zoom a:hover {
   background: var(--primary-light-bg) !important;
   color: var(--primary-solid) !important;
@@ -97,7 +116,7 @@
   padding: 32px;
   box-shadow: var(--shadow-sm);
   color: var(--text-main);
-  
+
   /* Layout Fix */
   margin-top: 32px;
   max-width: 800px;
@@ -226,7 +245,7 @@
   color: var(--text-main);
 }
 
-.popup-card input, 
+.popup-card input,
 .popup-card select {
   background: white;
   border: 1px solid var(--border-color);
@@ -252,7 +271,7 @@
   .map-content {
     padding: 16px;
   }
-  
+
   .map-section .leaflet-container {
     height: 400px !important;
   }
