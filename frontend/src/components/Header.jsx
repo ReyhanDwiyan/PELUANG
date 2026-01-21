@@ -6,7 +6,6 @@ import "../styles/Header.css";
 export default function Header() {
     const location = useLocation();
     const isAuthenticated = storage.isAuthenticated();
-    // Tambahan: Cek apakah user adalah admin
     const isAdmin = storage.isAdmin(); 
     const [isVisible, setIsVisible] = useState(true);
     const [lastScrollY, setLastScrollY] = useState(0);
@@ -16,13 +15,10 @@ export default function Header() {
             const currentScrollY = window.scrollY;
 
             if (currentScrollY < 10) {
-                // Selalu tampilkan di top
                 setIsVisible(true);
             } else if (currentScrollY > lastScrollY && currentScrollY > 80) {
-                // Scroll ke bawah & sudah lewat 80px → hide
                 setIsVisible(false);
             } else if (currentScrollY < lastScrollY) {
-                // Scroll ke atas → show
                 setIsVisible(true);
             }
 
@@ -40,6 +36,7 @@ export default function Header() {
         <header className={`topnav ${isVisible ? 'topnav--visible' : 'topnav--hidden'}`}>
             <div className="topnav__inner">
                 <NavLink to={isAuthenticated ? "/dashboard" : "/"} className="topnav__brand">
+                    <img src="/images/logo-peluang.png" alt="Logo Peluang" className="topnav__logo" style={{ height: '32px', marginRight: '8px', verticalAlign: 'middle' }} />
                     <span className="topnav__name">Peluang</span>
                 </NavLink>
 
@@ -55,7 +52,6 @@ export default function Header() {
                             Riwayat
                         </NavLink>
                         
-                        {/* PERUBAHAN DI SINI: Hanya render jika isAdmin bernilai true */}
                         {isAdmin && (
                             <NavLink to="/admin" className={({ isActive }) => (isActive ? "isActive" : "")}>
                                 Admin Panel

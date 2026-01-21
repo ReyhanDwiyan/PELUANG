@@ -13,7 +13,6 @@ const AdminPage = () => {
     const [showAddForm, setShowAddForm] = useState(false);
     const [editingData, setEditingData] = useState(null);
 
-    // STATE FORM DATA (Disesuaikan dengan Backend Baru)
     const [formData, setFormData] = useState({
         markerId: '',
         averageAge: '',
@@ -56,7 +55,6 @@ const AdminPage = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            // Validasi Total Persentase (Optional tapi bagus)
             const totalPct = parseFloat(formData.studentPercentage) + parseFloat(formData.workerPercentage) + parseFloat(formData.familyPercentage);
             if (totalPct > 100) {
                 alert("Total persentase demografi tidak boleh lebih dari 100%");
@@ -176,7 +174,6 @@ const AdminPage = () => {
 
                         <form onSubmit={handleSubmit}>
                             <div className="form-grid">
-                                {/* PILIH MARKER */}
                                 <div className="form-group full-width">
                                     <label>Pilih Lokasi Marker *</label>
                                     <select name="markerId" value={formData.markerId} onChange={handleInputChange} required disabled={editingData !== null}>
@@ -187,7 +184,6 @@ const AdminPage = () => {
                                     </select>
                                 </div>
 
-                                {/* SECTION 1: DEMOGRAFI DASAR */}
                                 <div className="form-section-label">1. Demografi Dasar</div>
                                 <div className="form-group">
                                     <label>Kepadatan (Jiwa/km²)</label>
@@ -198,7 +194,6 @@ const AdminPage = () => {
                                     <input type="number" name="averageAge" value={formData.averageAge} onChange={handleInputChange} required placeholder="Contoh: 30" step="0.1" />
                                 </div>
 
-                                {/* SECTION 2: TARGET PASAR (BARU) */}
                                 <div className="form-section-label">2. Target Pasar (Total Max 100%)</div>
                                 <div className="form-group">
                                     <label>% Mahasiswa</label>
@@ -213,7 +208,6 @@ const AdminPage = () => {
                                     <input type="number" name="familyPercentage" value={formData.familyPercentage} onChange={handleInputChange} min="0" max="100" />
                                 </div>
 
-                                {/* SECTION 3: EKONOMI & AKSES */}
                                 <div className="form-section-label">3. Ekonomi & Infrastruktur</div>
                                 <div className="form-group">
                                     <label>Pendapatan Rata-rata (Bulan)</label>
@@ -243,7 +237,6 @@ const AdminPage = () => {
                     </div>
                 )}
 
-                {/* TABLE DATA */}
                 <div className="admin-table-card">
                     <h3>📊 Data Wilayah Terdaftar ({spatialData.length})</h3>
                     {spatialData.length === 0 ? <p className="empty-message">Belum ada data.</p> : (

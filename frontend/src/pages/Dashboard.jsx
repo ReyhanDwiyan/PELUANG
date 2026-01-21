@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { spatialDataAPI } from '../services/api'; // Gunakan spatialDataAPI
+import { spatialDataAPI } from '../services/api'; 
 import { requireAuth } from '../utils/auth';
 import '../styles/GlobalPages.css';
-import '../styles/Dashboard.css'; // Pastikan file CSS ini ada
+import '../styles/Dashboard.css'; 
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -21,7 +21,6 @@ const Dashboard = () => {
 
   const loadDashboardData = async () => {
     try {
-      // 1. Ambil Statistik Angka (Total & Rata-rata)
       const statsRes = await spatialDataAPI.getUserStats();
       if (statsRes.data.success) {
         setStats({
@@ -30,10 +29,8 @@ const Dashboard = () => {
         });
       }
 
-      // 2. Ambil Riwayat Terbaru (Top 5) untuk List Bawah
       const historyRes = await spatialDataAPI.getHistory();
       if (historyRes.data.success) {
-        // Ambil 5 data pertama saja
         setRecentActivity(historyRes.data.data.slice(0, 5));
       }
 
@@ -53,10 +50,10 @@ const Dashboard = () => {
   };
 
   const getScoreColor = (score) => {
-    if (score >= 75) return '#10b981'; // Hijau
-    if (score >= 60) return '#3b82f6'; // Biru
-    if (score >= 40) return '#f59e0b'; // Kuning
-    return '#ef4444'; // Merah
+    if (score >= 75) return '#10b981';
+    if (score >= 60) return '#3b82f6'; 
+    if (score >= 40) return '#f59e0b'; 
+    return '#ef4444'; 
   };
 
   return (
@@ -67,7 +64,6 @@ const Dashboard = () => {
           <p className="page-subtitle">Ringkasan aktivitas analisis bisnis Anda</p>
         </header>
 
-        {/* Stats Cards */}
         <div className="stats-grid">
           <div className="stat-card">
             <div className="stat-header">
@@ -100,7 +96,6 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Recent Analysis List */}
         <div className="card">
           <div className="card-header">
             <h2 className="card-title">Analisis Terbaru</h2>

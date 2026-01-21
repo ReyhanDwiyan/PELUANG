@@ -59,11 +59,10 @@ const MapPage = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState(null);
 
-  // STATE UTAMA
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    category: '', // Default kosong
+    category: '', 
     address: '',
     rating: 0
   });
@@ -71,7 +70,6 @@ const MapPage = () => {
   const [popup, setPopup] = useState({ show: false, lat: null, lng: null });
   const [result, setResult] = useState(null);
 
-  // Ambil role user dari storage
   const user = storage.getUser();
   const isAdmin = user && user.role === 'admin';
 
@@ -93,7 +91,6 @@ const MapPage = () => {
     }
   };
 
-  // FUNGSI RESET FORM (Dipanggil saat Buka/Tutup/Simpan)
   const resetForm = () => {
     setFormData({
       title: '',
@@ -105,11 +102,10 @@ const MapPage = () => {
   };
 
   const handleMapClick = (latlng) => {
-    resetForm(); // Reset saat klik peta
+    resetForm(); 
     setSelectedLocation(latlng);
 
     if (isAdmin) setShowAddForm(true);
-    // Untuk user biasa, hanya tampilkan popup analisis potensi
     if (!isAdmin) setPopup({ show: true, lat: latlng.lat, lng: latlng.lng });
   };
 
@@ -142,7 +138,7 @@ const MapPage = () => {
       if (response.data.success) {
         alert('Marker berhasil ditambahkan!');
         setShowAddForm(false);
-        resetForm(); // Reset setelah simpan
+        resetForm(); 
         setSelectedLocation(null);
         loadMarkers();
       }
@@ -170,7 +166,7 @@ const MapPage = () => {
   const handleClose = () => {
     setPopup({ show: false, lat: null, lng: null });
     setResult(null);
-    resetForm(); // Reset saat user biasa menutup popup
+    resetForm(); 
   };
 
   const handleAnalyzeSubmit = async (e) => {
@@ -184,17 +180,14 @@ const MapPage = () => {
       });
       setResult(res.data);
 
-      // --- TAMBAHKAN BAGIAN INI ---
       if (res.data.success) {
         setPopup({ show: false, lat: null, lng: null });
       }
-      // ----------------------------
 
     } catch (err) {
       setResult({ success: false, message: err.response?.data?.message || 'Gagal prediksi' });
     }
   };
-  // Center: Kampus ULBI Bandung
   const ulbiCenter = [-6.8755, 107.5772];
 
   return (
@@ -224,7 +217,6 @@ const MapPage = () => {
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
 
-                {/* Existing Markers */}
                 {markers.map((marker) => (
                   <Marker
                     key={marker._id}
@@ -250,13 +242,11 @@ const MapPage = () => {
                   </Marker>
                 ))}
 
-                {/* Marker biru saat klik map */}
                 <LocationMarker onAddMarker={handleMapClick} showMarker={true} />
               </MapContainer>
             )}
           </div>
 
-          {/* Add Marker Form - hanya untuk admin */}
           {isAdmin && showAddForm && (
             <div className="add-marker-form">
               <div className="form-header">
@@ -266,7 +256,7 @@ const MapPage = () => {
                   onClick={() => {
                     setShowAddForm(false);
                     setSelectedLocation(null);
-                    resetForm(); // RESET DITAMBAHKAN DI SINI
+                    resetForm(); 
                   }}
                 >
                   ✕
@@ -357,7 +347,7 @@ const MapPage = () => {
                     onClick={() => {
                       setShowAddForm(false);
                       setSelectedLocation(null);
-                      resetForm(); // RESET DITAMBAHKAN DI SINI
+                      resetForm(); 
                     }}
                   >
                     Batal
@@ -367,12 +357,10 @@ const MapPage = () => {
             </div>
           )}
 
-          {/* Popup Analisis Potensi - hanya untuk user biasa */}
           {!isAdmin && popup.show && (
             <div className="popup-card">
               <button className="btn-close" onClick={handleClose}>✕</button>
               <h3>Analisis Potensi Bisnis</h3>
-              {/* Tambahkan autoComplete="off" */}
               <form onSubmit={handleAnalyzeSubmit} autoComplete="off">
                 <div className="form-group">
                   <label>Latitude</label>
@@ -549,7 +537,6 @@ const MapPage = () => {
                     <button className="btn-close" onClick={() => setResult(null)}>✕</button>
                   </div>
 
-                  {/* Skor Utama */}
                   <div style={{ textAlign: 'center', marginBottom: 20, borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: 15 }}>
                     <div style={{ fontSize: '42px', fontWeight: '800', color: result.score >= 60 ? '#10b981' : result.score >= 40 ? '#f59e0b' : '#ef4444' }}>
                       {result.score}%
@@ -559,7 +546,6 @@ const MapPage = () => {
                     </div>
                   </div>
 
-                  {/* --- NEW: DETAIL PERHITUNGAN (BREAKDOWN) --- */}
                   {result.breakdown && (
                     <div style={{ marginBottom: 20, fontSize: '13px', color: '#d1d5db' }}>
                       <h4 style={{ color: '#e5e7eb', marginBottom: 10, fontSize: '14px' }}>Rincian Nilai:</h4>
@@ -568,7 +554,6 @@ const MapPage = () => {
                         <span style={{ fontWeight: 'bold' }}>{result.breakdown.baseScore}</span>
                       </div>
 
-                      {/* Loop Adjustments (Kategori) */}
                       {result.breakdown.adjustments.map((adj, idx) => (
                         <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                           <span>{adj.label}</span>
@@ -578,7 +563,6 @@ const MapPage = () => {
                         </div>
                       ))}
 
-                      {/* Penalti Kompetitor */}
                       {result.breakdown.competitorPenalty !== 0 && (
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                           <span>Faktor Kompetisi</span>
@@ -588,7 +572,6 @@ const MapPage = () => {
                         </div>
                       )}
 
-                      {/* Penyesuaian Sewa */}
                       {result.breakdown.rentAdjustment !== 0 && (
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                           <span>Efisiensi Biaya Sewa</span>
@@ -604,7 +587,6 @@ const MapPage = () => {
                       </div>
                     </div>
                   )}
-                  {/* ------------------------------------------- */}
 
                   <div style={{ background: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '8px', marginBottom: '15px' }}>
                     <h4 style={{ margin: '0 0 10px 0', color: '#36d6ff', fontSize: '14px' }}>Rekomendasi Cerdas:</h4>
@@ -619,7 +601,6 @@ const MapPage = () => {
                     )}
                   </div>
 
-                  {/* Info Tambahan */}
                   <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '20px' }}>
                     {result.competitorsFound !== undefined && (
                       <p>🏢 Kompetitor: {result.competitorsFound} (Jarak terdekat: {result.nearestCompetitorDistance}m)</p>
