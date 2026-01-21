@@ -140,7 +140,8 @@
 
 .lp-section {
     padding: 90px 0;
-    background: #f8f9fc;
+    --accent-purple: 0, 168, 150;
+    --accent-cyan: 2, 62, 138;
 }
 
 .grid-3 {
