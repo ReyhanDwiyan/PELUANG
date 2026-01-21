@@ -34,36 +34,6 @@ const LandingPage = () => {
                         >
                             Mulai Gratis →
                         </button>
-
-                        <button
-                            className="lp-btn lp-btn-secondary"
-                            onClick={() => navigate('/login')}
-                        >
-                            Lihat Demo
-                        </button>
-                    </div>
-
-                    <div className="lp-meta">
-                        <span>✓ Rapi & Konsisten</span>
-                        <span>✓ Responsif</span>
-                        <span>✓ Aman</span>
-                    </div>
-                </div>
-            </section>
-
-            <section className="lp-section">
-                <div className="lp-container grid-3">
-                    <div className="lp-card">
-                        <h3>Pemetaan Spasial</h3>
-                        <p>Visualisasi data lokasi dengan presisi tinggi dan UI intuitif.</p>
-                    </div>
-                    <div className="lp-card">
-                        <h3>Analitik Real-time</h3>
-                        <p>Pantau potensi wilayah dan performa usaha secara langsung.</p>
-                    </div>
-                    <div className="lp-card">
-                        <h3>Keamanan Data</h3>
-                        <p>Dirancang dengan standar keamanan modern dan terukur.</p>
                     </div>
                 </div>
             </section>
