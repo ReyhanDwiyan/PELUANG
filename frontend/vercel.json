@@ -1,33 +1,8 @@
 {
-    "version": 2,
-    "builds": [
-        {
-            "src": "package.json",
-            "use": "@vercel/static-build",
-            "config": {
-                "distDir": "build"
-            }
-        }
-    ],
-    "routes": [
-        {
-            "src": "/static/(.*)",
-            "dest": "/static/$1"
-        },
-        {
-            "src": "/(.*)",
-            "dest": "/index.html"
-        }
-    ],
-    "buildCommand": "npm run build",
-    "outputDirectory": "build",
-    "framework": "create-react-app",
-    "functions": {
-        "build": {
-            "maxDuration": 60
-        }
-    },
-    "env": {
-        "NODE_VERSION": "18.20.0"
-    }
+  "buildCommand": "npm run build",
+  "outputDirectory": "build",
+  "framework": "create-react-app",
+  "env": {
+    "NODE_VERSION": "18.20.0"
+  }
 }
